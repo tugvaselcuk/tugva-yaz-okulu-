@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initQuota() {
     const badge = document.getElementById('quota-badge');
 
-    // 1. Doğrudan Sunucudan Anlık Sayı Al
     try {
         const countSnapshot = await getCountFromServer(REGISTRATIONS_COL);
         const total = countSnapshot.data().count;
@@ -32,13 +31,12 @@ async function initQuota() {
         } catch (e) {
             console.error("Yedek sorgu da başarısız:", e);
             if (badge) {
-                badge.className = "quota-pill shadow-sm bg-primary";
+                badge.className = "quota-pill shadow-sm bg-primary text-white";
                 badge.innerHTML = `<i class="fa-solid fa-user-group me-1"></i> Kalan Kontenjan: 45 / ${MAX_QUOTA}`;
             }
         }
     }
 
-    // 2. Canlı Dinleyiciyi Arka Planda Başlat
     try {
         onSnapshot(REGISTRATIONS_COL, (snapshot) => {
             updateQuotaUI(snapshot.docs.length);
@@ -46,7 +44,7 @@ async function initQuota() {
             console.error("Canlı dinleme hatası:", error);
         });
     } catch (error) {
-        console.error("onSnapshot başlatılamadı:", error);
+        console.error("onSnapshot hatası:", error);
     }
 }
 
@@ -72,6 +70,7 @@ function setupFormEvents() {
     const birthInput = document.getElementById('birthDate');
     const minorFields = document.getElementById('minorFields');
     const form = document.getElementById('registrationForm');
+    const submitBtn = document.getElementById('submitBtn');
 
     if (birthInput && minorFields) {
         birthInput.addEventListener('change', () => {
@@ -87,6 +86,15 @@ function setupFormEvents() {
     if (form) {
         form.addEventListener('input', saveDraftToLocalStorage);
         form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            await handleFormSubmit();
+            return false;
+        });
+    }
+
+    if (submitBtn) {
+        submitBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             await handleFormSubmit();
         });
@@ -163,62 +171,72 @@ function loadDraftFromLocalStorage() {
             if (age >= 18 && minorFields) minorFields.classList.add('d-none');
         }
     } catch (e) {
-        console.error(e);
+        console.error("Taslak okuma hatası:", e);
     }
 }
 
 async function handleFormSubmit() {
-    const name = formatName(document.getElementById('name').value);
-    const surname = formatName(document.getElementById('surname').value);
-    const tc = cleanDoubleSpaces(document.getElementById('tc').value);
-    const phone = cleanDoubleSpaces(document.getElementById('phone').value);
-    const birthDate = document.getElementById('birthDate').value;
-    const gender = document.getElementById('gender').value;
-    const district = formatName(document.getElementById('district').value);
-    const neighborhood = formatName(document.getElementById('neighborhood').value);
-    const address = cleanDoubleSpaces(document.getElementById('address').value);
-
-    const age = calculateAge(birthDate);
-    const isMinor = age < 18;
-
-    let school = "", className = "", parentName = "", parentPhone = "";
-
-    if (isMinor) {
-        school = formatName(document.getElementById('school').value);
-        className = cleanDoubleSpaces(document.getElementById('className').value);
-        parentName = formatName(document.getElementById('parentName').value);
-        parentPhone = cleanDoubleSpaces(document.getElementById('parentPhone').value);
-    }
-
-    if (!name || !surname || !tc || !phone || !birthDate || !gender || !district || !neighborhood || !address) {
-        notify.error("Lütfen zorunlu alanların tamamını doldurunuz.");
-        return;
-    }
-
-    if (!validateTC(tc)) {
-        notify.error("Geçersiz T.C. Kimlik Numarası girdiniz!");
-        return;
-    }
-
-    if (!validatePhone(phone)) {
-        notify.error("Telefon numarası 05 ile başlamalı ve 11 haneli olmalıdır.");
-        return;
-    }
-
-    if (isMinor) {
-        if (!school || !className || !parentName || !parentPhone) {
-            notify.error("18 yaş altı kayıtlar için okul, sınıf ve veli bilgileri zorunludur.");
-            return;
-        }
-        if (!validatePhone(parentPhone)) {
-            notify.error("Veli telefon numarası 05 ile başlamalı ve 11 haneli olmalıdır.");
-            return;
-        }
-    }
-
-    Swal.fire({ title: 'Kayıt Yapılıyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-
     try {
+        const nameVal = document.getElementById('name')?.value || '';
+        const surnameVal = document.getElementById('surname')?.value || '';
+        const tcVal = document.getElementById('tc')?.value || '';
+        const phoneVal = document.getElementById('phone')?.value || '';
+        const birthDateVal = document.getElementById('birthDate')?.value || '';
+        const genderVal = document.getElementById('gender')?.value || '';
+        const districtVal = document.getElementById('district')?.value || '';
+        const neighborhoodVal = document.getElementById('neighborhood')?.value || '';
+        const addressVal = document.getElementById('address')?.value || '';
+
+        const name = formatName(nameVal);
+        const surname = formatName(surnameVal);
+        const tc = cleanDoubleSpaces(tcVal);
+        const phone = cleanDoubleSpaces(phoneVal);
+        const birthDate = birthDateVal;
+        const gender = genderVal;
+        const district = formatName(districtVal);
+        const neighborhood = formatName(neighborhoodVal);
+        const address = cleanDoubleSpaces(addressVal);
+
+        const age = calculateAge(birthDate);
+        const isMinor = age < 18;
+
+        let school = "", className = "", parentName = "", parentPhone = "";
+
+        if (isMinor) {
+            school = formatName(document.getElementById('school')?.value || '');
+            className = cleanDoubleSpaces(document.getElementById('className')?.value || '');
+            parentName = formatName(document.getElementById('parentName')?.value || '');
+            parentPhone = cleanDoubleSpaces(document.getElementById('parentPhone')?.value || '');
+        }
+
+        if (!name || !surname || !tc || !phone || !birthDate || !gender || !district || !neighborhood || !address) {
+            notify.error("Lütfen zorunlu alanların tamamını doldurunuz.");
+            return;
+        }
+
+        if (!validateTC(tc)) {
+            notify.error("Geçersiz T.C. Kimlik Numarası girdiniz!");
+            return;
+        }
+
+        if (!validatePhone(phone)) {
+            notify.error("Telefon numarası 05 ile başlamalı ve 11 haneli olmalıdır.");
+            return;
+        }
+
+        if (isMinor) {
+            if (!school || !className || !parentName || !parentPhone) {
+                notify.error("18 yaş altı kayıtlar için okul, sınıf ve veli bilgileri zorunludur.");
+                return;
+            }
+            if (!validatePhone(parentPhone)) {
+                notify.error("Veli telefon numarası 05 ile başlamalı ve 11 haneli olmalıdır.");
+                return;
+            }
+        }
+
+        Swal.fire({ title: 'Kayıt Yapılıyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
         // Çift TC Kontrolü
         const qTc = query(REGISTRATIONS_COL, where("tc", "==", tc));
         const snapTc = await getDocs(qTc);
@@ -280,7 +298,9 @@ async function handleFormSubmit() {
         });
 
         localStorage.removeItem('tugva_registration_draft');
-        document.getElementById('registrationForm').reset();
+        const formEl = document.getElementById('registrationForm');
+        if (formEl) formEl.reset();
+        
         Swal.close();
         await showSuccessScreen(currentCreatedData);
 
@@ -290,30 +310,33 @@ async function handleFormSubmit() {
         if (err.message === "KONTENJAN_DOLU") {
             notify.error("Kayıt başarısız! Kontenjan dolmuştur.");
         } else {
-            notify.error("Kayıt hatası: " + (err.message || "Bilinmeyen hata"));
+            notify.error("Kayıt hatası: " + (err.message || "Sistem hatası oluştu."));
         }
     }
 }
 
 async function showSuccessScreen(data) {
-    document.getElementById('form-card').classList.add('d-none');
-    document.getElementById('success-card').classList.remove('d-none');
+    const formCard = document.getElementById('form-card');
+    const successCard = document.getElementById('success-card');
 
-    document.getElementById('res-regNumber').innerText = `Kayıt No: ${data.registerNumber}`;
-    document.getElementById('res-fullName').innerText = `${data.name} ${data.surname}`;
-    document.getElementById('res-tc').innerText = data.tc;
-    document.getElementById('res-phone').innerText = data.phone;
-    document.getElementById('res-birth').innerText = `${data.birthDate} (${data.age} Yaş / ${data.gender})`;
-    document.getElementById('res-address').innerText = `${data.neighborhood} Mah. ${data.district} / ${data.address}`;
-    document.getElementById('res-seat').innerText = data.seatNumber || 'Koltuk: Atanmadı';
+    if (formCard) formCard.classList.add('d-none');
+    if (successCard) successCard.classList.remove('d-none');
+
+    if (document.getElementById('res-regNumber')) document.getElementById('res-regNumber').innerText = `Kayıt No: ${data.registerNumber}`;
+    if (document.getElementById('res-fullName')) document.getElementById('res-fullName').innerText = `${data.name} ${data.surname}`;
+    if (document.getElementById('res-tc')) document.getElementById('res-tc').innerText = data.tc;
+    if (document.getElementById('res-phone')) document.getElementById('res-phone').innerText = data.phone;
+    if (document.getElementById('res-birth')) document.getElementById('res-birth').innerText = `${data.birthDate} (${data.age} Yaş / ${data.gender})`;
+    if (document.getElementById('res-address')) document.getElementById('res-address').innerText = `${data.neighborhood} Mah. ${data.district} / ${data.address}`;
+    if (document.getElementById('res-seat')) document.getElementById('res-seat').innerText = data.seatNumber || 'Koltuk: Atanmadı';
 
     const minorDiv = document.getElementById('res-minorInfo');
     if (data.age < 18) {
-        minorDiv.classList.remove('d-none');
-        document.getElementById('res-school').innerText = `${data.school} - Sınıf: ${data.className}`;
-        document.getElementById('res-parent').innerText = `${data.parentName} (${data.parentPhone})`;
+        if (minorDiv) minorDiv.classList.remove('d-none');
+        if (document.getElementById('res-school')) document.getElementById('res-school').innerText = `${data.school} - Sınıf: ${data.className}`;
+        if (document.getElementById('res-parent')) document.getElementById('res-parent').innerText = `${data.parentName} (${data.parentPhone})`;
     } else {
-        minorDiv.classList.add('d-none');
+        if (minorDiv) minorDiv.classList.add('d-none');
     }
 
     currentQrDataUrl = await generateQR('successQrCode', data.id);
