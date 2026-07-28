@@ -1,9 +1,9 @@
-export function downloadRegistrationPDF(data) {
+export async function downloadRegistrationPDF(data, qrDataUrl = null) {
     if (!data) return;
     const { jsPDF } = window.jspdf;
     const docPdf = new jsPDF();
 
-    // Türkçe karakter dönüşüm fonksiyonu (jsPDF standart font uyumu için)
+    // Türkçe karakter düzeltme fonksiyonu (jsPDF standart fontları için)
     const trFix = (str) => {
         if (!str) return '';
         return String(str)
@@ -15,9 +15,10 @@ export function downloadRegistrationPDF(data) {
             .replace(/Ç/g, 'C').replace(/ç/g, 'c');
     };
 
-    // Başlık ve Çerçeve
+    // 1. Dış Çerçeve ve Başlık
     docPdf.setLineWidth(0.5);
-    docPdf.rect(10, 10, 190, 277); // Sayfa çerçevesi
+    docPdf.rect(10, 10, 190, 277);
+    
     docPdf.setFontSize(18);
     docPdf.setFont("helvetica", "bold");
     docPdf.text("TUGVA YAZ OKULU KAYIT BELGESI", 15, 25);
@@ -29,24 +30,25 @@ export function downloadRegistrationPDF(data) {
     docPdf.setLineWidth(0.2);
     docPdf.line(15, 35, 195, 35);
 
-    // QR Kodu Ekran Elemanından Alıp PDF'e Ekleme
-    const qrElement = document.querySelector('#successQrCode img') || document.querySelector('#successQrCode canvas');
-    if (qrElement) {
-        let qrDataUrl = '';
-        if (qrElement.tagName.toLowerCase() === 'img') {
-            qrDataUrl = qrElement.src;
-        } else if (qrElement.tagName.toLowerCase() === 'canvas') {
-            qrDataUrl = qrElement.toDataURL('image/png');
-        }
-
-        if (qrDataUrl) {
-            // Sağ üst köşeye QR Ekle
-            docPdf.addImage(qrDataUrl, 'PNG', 145, 40, 45, 45);
-            docPdf.rect(143, 38, 49, 49); // QR çerçevesi
+    // 2. QR Kod Eklenmesi (Parametre olarak gelmediyse ekrandan dinamik çekmeye çalışır)
+    let finalQrUrl = qrDataUrl;
+    if (!finalQrUrl) {
+        const qrImg = document.querySelector('#successQrCode img');
+        const qrCanvas = document.querySelector('#successQrCode canvas');
+        if (qrCanvas) {
+            finalQrUrl = qrCanvas.toDataURL('image/png');
+        } else if (qrImg && qrImg.src) {
+            finalQrUrl = qrImg.src;
         }
     }
 
-    // Öğrenci Bilgileri
+    if (finalQrUrl) {
+        // QR Kodu PDF'in Sağ Üst Kısmına Çerçeveli Ekle
+        docPdf.addImage(finalQrUrl, 'PNG', 140, 42, 48, 48);
+        docPdf.rect(138, 40, 52, 52);
+    }
+
+    // 3. Öğrenci Bilgileri
     let startY = 45;
     const lineHeight = 8;
 
@@ -121,7 +123,7 @@ export function downloadRegistrationPDF(data) {
     docPdf.setFont("helvetica", "normal");
     docPdf.text(trFix(data.seatNumber || 'Atanmadi'), 55, startY);
 
-    // Alt Bilgi Dipnot
+    // Alt Bilgi
     docPdf.setFontSize(9);
     docPdf.setFont("helvetica", "italic");
     docPdf.text("Bu belge TUGVA Yaz Okulu Kayit Sistemi tarafindan otomatik uretilmistir.", 15, 275);
