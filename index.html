@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TÜGVA Yaz Okulu Kayıt Sistemi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-custom fs-4" href="index.html">
+                <i class="fa-solid fa-graduation-cap me-2"></i>Yaz Okulu Kayıt Sistemi
+            </a>
+            <div class="ms-auto d-flex gap-2">
+                <a href="index.html" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-pen-to-square me-1"></i>Kayıt Formu
+                </a>
+                <a href="admin.html" class="btn btn-outline-dark btn-sm">
+                    <i class="fa-solid fa-user-shield me-1"></i>Yönetici Paneli
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card card-custom p-4 mb-4 text-center">
+                    <h2 class="fw-bold mb-2 text-primary">TÜGVA Yaz Okulu Kayıt Portalı</h2>
+                    <p class="text-muted mb-3">Lütfen aşağıdaki bilgileri eksiksiz ve doğru şekilde doldurunuz.</p>
+                    <div class="d-inline-flex justify-content-center align-items-center gap-3">
+                        <span class="badge bg-primary fs-6 px-3 py-2" id="quota-badge">Kontenjan Durumu Yükleniyor...</span>
+                    </div>
+                </div>
+
+                <div class="card card-custom p-4" id="form-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <h4 class="card-title fw-bold mb-0 text-secondary"><i class="fa-solid fa-user-plus me-2"></i>Öğrenci Kayıt Formu</h4>
+                        <span class="badge bg-light text-dark border" id="draft-status-indicator"><i class="fa-solid fa-floppy-disk me-1"></i>Otomatik Kaydediliyor</span>
+                    </div>
+
+                    <form id="registrationForm" novalidate>
+                        <div class="row g-3">
+                            <div class="col-12"><h6 class="fw-bold text-primary mt-2">1. Kişisel Bilgiler</h6></div>
+                            <div class="col-md-6"><label class="form-label">Ad <span class="text-danger">*</span></label><input type="text" class="form-control" id="name" required></div>
+                            <div class="col-md-6"><label class="form-label">Soyad <span class="text-danger">*</span></label><input type="text" class="form-control" id="surname" required></div>
+                            <div class="col-md-6"><label class="form-label">T.C. Kimlik No <span class="text-danger">*</span></label><input type="text" class="form-control" id="tc" maxlength="11" placeholder="11 Haneli TC Kimlik No" required></div>
+                            <div class="col-md-6"><label class="form-label">Telefon Numarası <span class="text-danger">*</span></label><input type="tel" class="form-control" id="phone" maxlength="11" placeholder="05XXXXXXXXX" required></div>
+                            <div class="col-md-6"><label class="form-label">Doğum Tarihi <span class="text-danger">*</span></label><input type="date" class="form-control" id="birthDate" required></div>
+                            <div class="col-md-6"><label class="form-label">Cinsiyet <span class="text-danger">*</span></label>
+                                <select class="form-select" id="gender" required>
+                                    <option value="">Seçiniz...</option>
+                                    <option value="Erkek">Erkek</option>
+                                    <option value="Kadın">Kadın</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12"><h6 class="fw-bold text-primary mt-3">2. Adres Bilgileri</h6></div>
+                            <div class="col-md-6"><label class="form-label">İlçe <span class="text-danger">*</span></label><input type="text" class="form-control" id="district" required></div>
+                            <div class="col-md-6"><label class="form-label">Mahalle <span class="text-danger">*</span></label><input type="text" class="form-control" id="neighborhood" required></div>
+                            <div class="col-12"><label class="form-label">Açık Adres <span class="text-danger">*</span></label><textarea class="form-control" id="address" rows="2" required></textarea></div>
+
+                            <div id="minorFields" class="row g-3 m-0 p-0">
+                                <div class="col-12"><h6 class="fw-bold text-primary mt-3">3. Okul ve Veli Bilgileri (18 Yaş Altı Zorunlu)</h6></div>
+                                <div class="col-md-6"><label class="form-label">Okul Adı <span class="text-danger">*</span></label><input type="text" class="form-control" id="school"></div>
+                                <div class="col-md-6"><label class="form-label">Sınıf <span class="text-danger">*</span></label><input type="text" class="form-control" id="className" placeholder="Örn: 7"></div>
+                                <div class="col-md-6"><label class="form-label">Veli Adı Soyadı <span class="text-danger">*</span></label><input type="text" class="form-control" id="parentName"></div>
+                                <div class="col-md-6"><label class="form-label">Veli Telefon Numarası <span class="text-danger">*</span></label><input type="tel" class="form-control" id="parentPhone" maxlength="11" placeholder="05XXXXXXXXX"></div>
+                            </div>
+
+                            <div class="col-12 mt-4 text-end">
+                                <button type="button" class="btn btn-outline-secondary me-2" id="clearDraftBtn">Formu Temizle</button>
+                                <button type="submit" class="btn btn-primary-custom btn-lg px-5" id="submitBtn"><i class="fa-solid fa-check me-2"></i>Kayıt Ol</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="card card-custom p-4 text-center d-none" id="success-card">
+                    <div class="mb-3 text-success"><i class="fa-solid fa-circle-check fa-4x"></i></div>
+                    <h3 class="fw-bold text-success mb-2">Kayıt Başarıyla Tamamlandı!</h3>
+                    <p class="text-muted">Kayıt kartınız ve özel QR kodunuz aşağıda oluşturulmuştur.</p>
+
+                    <div id="printableArea" class="border p-4 my-3 rounded bg-light text-start">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h5 class="fw-bold text-primary mb-3" id="res-regNumber">Kayıt No: -</h5>
+                                <p class="mb-1"><strong>Ad Soyad:</strong> <span id="res-fullName">-</span></p>
+                                <p class="mb-1"><strong>TC Kimlik:</strong> <span id="res-tc">-</span></p>
+                                <p class="mb-1"><strong>Telefon:</strong> <span id="res-phone">-</span></p>
+                                <p class="mb-1"><strong>Doğum Tarihi / Yaş:</strong> <span id="res-birth">-</span></p>
+                                <p class="mb-1"><strong>Adres:</strong> <span id="res-address">-</span></p>
+                                <div id="res-minorInfo">
+                                    <p class="mb-1"><strong>Okul / Sınıf:</strong> <span id="res-school">-</span></p>
+                                    <p class="mb-1"><strong>Veli Bilgisi:</strong> <span id="res-parent">-</span></p>
+                                </div>
+                                <p class="mb-1 mt-2 text-danger"><strong>Koltuk Numarası:</strong> <span id="res-seat" class="badge bg-warning text-dark fs-6">Atanmadı</span></p>
+                            </div>
+                            <div class="col-md-4 text-center mt-3 mt-md-0">
+                                <div id="successQrCode" class="d-flex justify-content-center mb-2"></div>
+                                <small class="text-muted d-block">Sistem Doğrulama QR</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mt-3">
+                        <button class="btn btn-outline-primary" id="downloadPdfBtn"><i class="fa-solid fa-file-pdf me-2"></i>PDF İndir</button>
+                        <button class="btn btn-outline-secondary" onclick="window.print()"><i class="fa-solid fa-print me-2"></i>Yazdır</button>
+                        <button class="btn btn-primary-custom" id="newRegistrationBtn"><i class="fa-solid fa-plus me-2"></i>Yeni Kayıt Yap</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
