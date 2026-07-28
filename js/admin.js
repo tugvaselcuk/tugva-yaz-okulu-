@@ -34,7 +34,7 @@ function setupRealtimeListener() {
         console.error("Firestore okuma hatası:", error);
         const tbody = document.getElementById('studentTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Veriler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyiniz.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Veriler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyiniz.</td></tr>`;
         }
     });
 }
@@ -50,7 +50,7 @@ function setupSearchAndFilterEvents() {
     if (seatFilterSelect) seatFilterSelect.addEventListener('change', processAndRenderData);
 }
 
-// Verileri İşleme, Soyada Göre Sıralama/Gruplama
+// Verileri İşleme, Soyada ve Manuel İndekse Göre Sıralama
 function processAndRenderData() {
     let result = [...allStudents];
 
@@ -90,11 +90,15 @@ function processAndRenderData() {
     
     result.sort((a, b) => {
         if (sortVal === 'surname') {
-            // Önce Soyadına Göre (Akrabalar yan yana)
+            // Soyadı A-Z (Akrabalar yan yana)
             const surComp = (a.surname || '').localeCompare(b.surname || '', 'tr', { sensitivity: 'base' });
             if (surComp !== 0) return surComp;
-            // Soyadı aynı ise Ada Göre
             return (a.name || '').localeCompare(b.name || '', 'tr', { sensitivity: 'base' });
+        } else if (sortVal === 'custom') {
+            // Manuel Sıralama İndeksi
+            const orderA = typeof a.displayOrder === 'number' ? a.displayOrder : 999999;
+            const orderB = typeof b.displayOrder === 'number' ? b.displayOrder : 999999;
+            return orderA - orderB;
         } else if (sortVal === 'name') {
             return (a.name || '').localeCompare(b.name || '', 'tr', { sensitivity: 'base' });
         } else if (sortVal === 'registerNumber') {
@@ -150,7 +154,7 @@ function renderTable(students, surnameCounts) {
     if (students.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="text-center py-5 text-muted">
+                <td colspan="10" class="text-center py-5 text-muted">
                     <i class="fa-solid fa-folder-open fa-2xl mb-3 d-block opacity-50"></i>
                     Aranan kriterlere uygun öğrenci bulunamadı.
                 </td>
@@ -160,7 +164,7 @@ function renderTable(students, surnameCounts) {
     }
 
     let html = '';
-    students.forEach((student) => {
+    students.forEach((student, index) => {
         const surnameKey = (student.surname || '').trim().toUpperCase('tr');
         const countWithSameSurname = surnameCounts[surnameKey] || 0;
         const isGrouped = countWithSameSurname > 1;
@@ -181,6 +185,7 @@ function renderTable(students, surnameCounts) {
 
         html += `
             <tr class="${rowClass}">
+                <td class="text-center fw-bold text-muted small">${index + 1}</td>
                 <td>
                     <span class="badge bg-light text-dark border font-monospace fs-6">
                         ${student.registerNumber || 'TYO-0000'}
@@ -201,16 +206,23 @@ function renderTable(students, surnameCounts) {
                     ${isMinor ? `<strong>Okul:</strong> ${student.school || '-'}<br><strong>Veli:</strong> ${student.parentName || '-'} (${student.parentPhone || '-'})` : '<span class="text-muted">Reşit Öğrenci</span>'}
                 </td>
                 <td class="text-center">
-                    <div class="btn-group btn-group-sm">
-                        <button class="btn btn-outline-dark qr-btn" data-id="${student.id}" title="QR Kod & İndir">
-                            <i class="fa-solid fa-qrcode"></i>
-                        </button>
-                        <button class="btn btn-outline-primary edit-btn" data-id="${student.id}" title="Düzenle / Koltuk Ver">
-                            <i class="fa-solid fa-pen"></i>
-                        </button>
-                        <button class="btn btn-outline-danger delete-btn" data-id="${student.id}" data-name="${student.name} ${student.surname}" title="Kaydı Sil">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
+                    <div class="d-inline-flex align-items-center gap-1">
+                        <!-- Manuel Sıralama Butonları -->
+                        <div class="reorder-btn-group me-1">
+                            <button class="btn btn-outline-secondary move-up-btn" data-index="${index}" title="Yukarı Taşı">▲</button>
+                            <button class="btn btn-outline-secondary move-down-btn" data-index="${index}" title="Aşağı Taşı">▼</button>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-dark qr-btn" data-id="${student.id}" title="QR Kod & İndir">
+                                <i class="fa-solid fa-qrcode"></i>
+                            </button>
+                            <button class="btn btn-outline-primary edit-btn" data-id="${student.id}" title="Düzenle / Koltuk Ver">
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn btn-outline-danger delete-btn" data-id="${student.id}" data-name="${student.name} ${student.surname}" title="Kaydı Sil">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
                     </div>
                 </td>
             </tr>
@@ -219,7 +231,15 @@ function renderTable(students, surnameCounts) {
 
     tbody.innerHTML = html;
 
-    // Buton Dinleyicilerini Bağla
+    // Dinleyicileri Bağla
+    tbody.querySelectorAll('.move-up-btn').forEach(btn => {
+        btn.addEventListener('click', () => moveStudentOrder(parseInt(btn.dataset.index), -1));
+    });
+
+    tbody.querySelectorAll('.move-down-btn').forEach(btn => {
+        btn.addEventListener('click', () => moveStudentOrder(parseInt(btn.dataset.index), 1));
+    });
+
     tbody.querySelectorAll('.qr-btn').forEach(btn => {
         btn.addEventListener('click', () => openQrModal(btn.dataset.id));
     });
@@ -235,6 +255,41 @@ function renderTable(students, surnameCounts) {
     tbody.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', () => confirmDeleteStudent(btn.dataset.id, btn.dataset.name));
     });
+}
+
+// Manuel Sıra Kaydırma Fonksiyonu (Yukarı / Aşağı)
+async function moveStudentOrder(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= filteredStudents.length) return;
+
+    // Dizi içindeki yerlerini değiştir
+    const currentStudent = filteredStudents[index];
+    const targetStudent = filteredStudents[targetIndex];
+
+    // Otomatik olarak 'custom' sıralama moduna al
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) sortSelect.value = 'custom';
+
+    // Mevcut görünümdeki tüm elemanlara sıra indekslerini atayalım
+    try {
+        filteredStudents.forEach((s, idx) => {
+            s.displayOrder = idx;
+        });
+
+        // İki elemanın sırasını takas et
+        currentStudent.displayOrder = targetIndex;
+        targetStudent.displayOrder = index;
+
+        // Veritabanında güncelle
+        await Promise.all([
+            updateDoc(doc(REGISTRATIONS_COL, currentStudent.id), { displayOrder: targetIndex }),
+            updateDoc(doc(REGISTRATIONS_COL, targetStudent.id), { displayOrder: index })
+        ]);
+
+        processAndRenderData();
+    } catch (err) {
+        console.error("Sıra güncelleme hatası:", err);
+    }
 }
 
 // Düzenleme Modalı Açma
@@ -297,7 +352,7 @@ function setupEditFormEvent() {
             Swal.fire({
                 icon: 'success',
                 title: 'Güncellendi',
-                text: 'Öğrenci ve koltuk bilgileri başarıyla kaydedildi.',
+                text: 'Öğrenci ve koltuk bilgileri kaydedildi.',
                 timer: 1800,
                 showConfirmButton: false
             });
@@ -385,7 +440,6 @@ function setupScannerEvents() {
             try {
                 const parsed = JSON.parse(decodedText);
                 if (parsed && parsed.id) {
-                    // Okuma Başarılı
                     if (html5QrcodeScanner) {
                         html5QrcodeScanner.clear().catch(e => console.error(e));
                         html5QrcodeScanner = null;
@@ -394,12 +448,11 @@ function setupScannerEvents() {
                     const modal = bootstrap.Modal.getInstance(qrScanModalEl);
                     if (modal) modal.hide();
 
-                    // Canlı Veri Oku
                     const docSnap = await getDoc(doc(REGISTRATIONS_COL, parsed.id));
                     if (docSnap.exists()) {
                         openQrModal(docSnap.id);
                     } else {
-                        Swal.fire('Bulunamadı', 'Okutulan QR koda ait öğrenci kaydı sistemde yok.', 'warning');
+                        Swal.fire('Bulunamadı', 'Okutulan QR koda ait öğrenci kaydı bulunamadı.', 'warning');
                     }
                 }
             } catch (err) {
@@ -439,7 +492,7 @@ function confirmDeleteStudent(studentId, fullName) {
     });
 }
 
-// Excel Dışa Aktarma
+// Excel Dışa Aktarma (Ekrandaki Canlı Sıraya Birebir Uygun)
 function setupExcelExportEvent() {
     const exportBtn = document.getElementById('exportExcelBtn');
     if (!exportBtn) return;
@@ -450,6 +503,7 @@ function setupExcelExportEvent() {
             return;
         }
 
+        // Ekrandaki tam dizilime göre Excel verisi hazırlar
         const excelData = filteredStudents.map((s, index) => ({
             "Sıra No": index + 1,
             "Kayıt No": s.registerNumber || '',
@@ -502,7 +556,7 @@ function setupExcelExportEvent() {
         Swal.fire({
             icon: 'success',
             title: 'Excel İndirildi',
-            text: `${filteredStudents.length} kayıt koltuk ve soyad grubuna göre indirildi.`,
+            text: `${filteredStudents.length} kayıt mevcut sıralama düzeniyle indirildi.`,
             timer: 2000,
             showConfirmButton: false
         });
