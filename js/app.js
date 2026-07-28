@@ -7,6 +7,7 @@ import { downloadRegistrationPDF } from "./pdf.js";
 import { MAX_QUOTA } from "./config.js";
 
 let currentCreatedData = null;
+let currentQrDataUrl = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     listenToQuota();
@@ -60,8 +61,8 @@ function setupFormEvents() {
         await handleFormSubmit();
     });
 
-    document.getElementById('downloadPdfBtn').addEventListener('click', () => {
-        downloadRegistrationPDF(currentCreatedData);
+    document.getElementById('downloadPdfBtn').addEventListener('click', async () => {
+        await downloadRegistrationPDF(currentCreatedData, currentQrDataUrl);
     });
 
     document.getElementById('newRegistrationBtn').addEventListener('click', () => {
@@ -231,7 +232,7 @@ async function handleFormSubmit() {
         localStorage.removeItem('tugva_registration_draft');
         document.getElementById('registrationForm').reset();
         Swal.close();
-        showSuccessScreen(currentCreatedData);
+        await showSuccessScreen(currentCreatedData);
 
     } catch (err) {
         console.error(err);
@@ -243,7 +244,7 @@ async function handleFormSubmit() {
     }
 }
 
-function showSuccessScreen(data) {
+async function showSuccessScreen(data) {
     document.getElementById('form-card').classList.add('d-none');
     document.getElementById('success-card').classList.remove('d-none');
 
@@ -264,6 +265,7 @@ function showSuccessScreen(data) {
         minorDiv.classList.add('d-none');
     }
 
-    generateQR('successQrCode', data.id);
+    // QR Kodunu üret ve base64 URL'ini değişkene kaydet
+    currentQrDataUrl = await generateQR('successQrCode', data.id);
 }
 
