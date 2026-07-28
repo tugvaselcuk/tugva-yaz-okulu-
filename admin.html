@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TÜGVA Yaz Okulu Yönetim Paneli</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Üst Gezinme Çubuğu -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-custom fs-4" href="index.html">
+                <i class="fa-solid fa-graduation-cap me-2"></i>Yaz Okulu Kayıt Sistemi
+            </a>
+            <div class="ms-auto d-flex gap-2">
+                <a href="index.html" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-pen-to-square me-1"></i>Kayıt Formu
+                </a>
+                <a href="admin.html" class="btn btn-dark btn-sm">
+                    <i class="fa-solid fa-user-shield me-1"></i>Yönetici Paneli
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        
+        <!-- Admin Giriş Kartı -->
+        <div class="row justify-content-center" id="admin-login-card">
+            <div class="col-md-5">
+                <div class="card card-custom p-4">
+                    <div class="text-center mb-4">
+                        <i class="fa-solid fa-user-lock fa-3x text-primary mb-2"></i>
+                        <h4 class="fw-bold">Yönetici Girişi</h4>
+                        <p class="text-muted small">Sisteme erişmek için admin kimlik bilgilerinizi giriniz.</p>
+                    </div>
+                    <form id="adminLoginForm">
+                        <div class="mb-3">
+                            <label for="adminEmail" class="form-label">E-Posta</label>
+                            <input type="email" class="form-control" id="adminEmail" required placeholder="admin@tugva.org">
+                        </div>
+                        <div class="mb-3">
+                            <label for="adminPassword" class="form-label">Şifre</label>
+                            <input type="password" class="form-control" id="adminPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary-custom w-100 py-2">Giriş Yap</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Kontrol Paneli (Giriş Yapılınca Açılır) -->
+        <div id="admin-dashboard" class="d-none">
+            
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="fw-bold text-primary mb-0"><i class="fa-solid fa-gauge-high me-2"></i>Yönetim Paneli</h3>
+                <div>
+                    <button class="btn btn-outline-danger btn-sm" id="adminLogoutBtn">
+                        <i class="fa-solid fa-right-from-bracket me-1"></i>Çıkış Yap
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Metrik Kartları -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4 col-lg-2">
+                    <div class="card card-custom stat-card p-3 text-center">
+                        <small class="text-muted fw-semibold">Toplam Kayıt</small>
+                        <h3 class="fw-bold text-dark mt-2 mb-0" id="stat-total">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card card-custom stat-card p-3 text-center" style="border-left-color: #0d6efd;">
+                        <small class="text-muted fw-semibold">Erkek</small>
+                        <h3 class="fw-bold text-primary mt-2 mb-0" id="stat-male">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card card-custom stat-card p-3 text-center" style="border-left-color: #e83e8c;">
+                        <small class="text-muted fw-semibold">Kadın</small>
+                        <h3 class="fw-bold text-danger mt-2 mb-0" id="stat-female">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card card-custom stat-card p-3 text-center" style="border-left-color: #198754;">
+                        <small class="text-muted fw-semibold">Koltuklu</small>
+                        <h3 class="fw-bold text-success mt-2 mb-0" id="stat-seated">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card card-custom stat-card p-3 text-center" style="border-left-color: #ffc107;">
+                        <small class="text-muted fw-semibold">Koltuksuz</small>
+                        <h3 class="fw-bold text-warning mt-2 mb-0" id="stat-unseated">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card card-custom stat-card p-3 text-center" style="border-left-color: #0dcaf0;">
+                        <small class="text-muted fw-semibold">Kalan Kontenjan</small>
+                        <h3 class="fw-bold text-info mt-2 mb-0" id="stat-quota">45</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- İşlem Çubuğu ve Arama -->
+            <div class="card card-custom p-3 mb-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                            <input type="text" id="adminSearchInput" class="form-control" placeholder="Ad, Soyad, TC, Tel, Kayıt No ile ara...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="adminGenderFilter" class="form-select">
+                            <option value="">Tüm Cinsiyetler</option>
+                            <option value="Erkek">Erkek</option>
+                            <option value="Kadın">Kadın</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5 text-end d-flex gap-2 justify-content-end">
+                        <button class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#qrScanModal">
+                            <i class="fa-solid fa-qrcode me-1"></i>QR Okut
+                        </button>
+                        <button class="btn btn-success" id="exportExcelBtn">
+                            <i class="fa-solid fa-file-excel me-1"></i>Excel İndir
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kayıt Listesi Tablosu -->
+            <div class="card card-custom p-3">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle" id="registrationsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Kayıt No</th>
+                                <th>Ad Soyad</th>
+                                <th>TC Kimlik</th>
+                                <th>Telefon</th>
+                                <th>Yaş / Cinsiyet</th>
+                                <th>İlçe / Mahalle</th>
+                                <th>Koltuk No</th>
+                                <th class="text-end">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="registrationsTbody">
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">Veriler yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Düzenleme Modalı -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Kayıt Düzenle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editRegistrationForm">
+                        <input type="hidden" id="editDocId">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Kayıt No</label>
+                                <input type="text" id="editRegisterNumber" class="form-control" disabled>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Koltuk No</label>
+                                <input type="text" id="editSeatNumber" class="form-control" placeholder="Örn: A-12">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">TC Kimlik</label>
+                                <input type="text" id="editTc" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Ad</label>
+                                <input type="text" id="editName" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Soyad</label>
+                                <input type="text" id="editSurname" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefon</label>
+                                <input type="tel" id="editPhone" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Cinsiyet</label>
+                                <select id="editGender" class="form-select" required>
+                                    <option value="Erkek">Erkek</option>
+                                    <option value="Kadın">Kadın</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">İlçe</label>
+                                <input type="text" id="editDistrict" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Mahalle</label>
+                                <input type="text" id="editNeighborhood" class="form-control" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Adres</label>
+                                <textarea id="editAddress" class="form-control" rows="2" required></textarea>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Okul</label>
+                                <input type="text" id="editSchool" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Sınıf</label>
+                                <input type="text" id="editClassName" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Veli Ad Soyad</label>
+                                <input type="text" id="editParentName" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Veli Telefon</label>
+                                <input type="tel" id="editParentPhone" class="form-control">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="button" class="btn btn-primary-custom" id="saveEditBtn">Değişiklikleri Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR Görüntüleme Modalı -->
+    <div class="modal fade" id="qrViewModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="qrModalTitle">Kayıt Detayı & QR</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center" id="qrModalBody">
+                    <div id="adminQrContainer" class="d-flex justify-content-center mb-3"></div>
+                    <div class="text-start bg-light p-3 rounded" id="qrDetailsContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kamera QR Okutma Modalı -->
+    <div class="modal fade" id="qrScanModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-camera me-2"></i>QR Kod Tara</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <div id="reader"></div>
+                    <p class="text-muted small mt-2">Kamerayı QR koda doğru tutunuz.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Kütüphaneler -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Modüler JS Bağlantısı -->
+    <script type="module" src="js/admin.js"></script>
+</body>
+</html>
+
