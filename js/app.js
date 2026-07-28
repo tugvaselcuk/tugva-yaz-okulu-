@@ -10,32 +10,44 @@ let currentCreatedData = null;
 let currentQrDataUrl = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initQuotaListener();
+    initQuota();
     setupFormEvents();
     loadDraftFromLocalStorage();
 });
 
-// Kontenjanı Canlı Dinle (Yükleniyor takılması koruması eklendi)
-function initQuotaListener() {
+// Kontenjan Bilgisini Getiren Garantili Fonksiyon
+async function initQuota() {
     const badge = document.getElementById('quota-badge');
 
-    // 1. Önce sunucudan anlık sayı çek
-    getCountFromServer(REGISTRATIONS_COL).then((snapshot) => {
-        updateQuotaUI(snapshot.data().count);
-    }).catch((err) => {
-        console.warn("Anlık sayı çekilemedi, canlı dinleyici bekleniyor:", err);
-    });
-
-    // 2. Canlı dinleyiciyi başlat
-    onSnapshot(REGISTRATIONS_COL, (snapshot) => {
-        updateQuotaUI(snapshot.docs.length);
-    }, (error) => {
-        console.error("Kontenjan dinleme hatası:", error);
-        if (badge) {
-            badge.className = "quota-pill shadow-sm bg-warning text-dark";
-            badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation me-1"></i> Kalan Kontenjan: Yüklenemedi`;
+    // 1. Doğrudan Sunucudan Anlık Sayı Al
+    try {
+        const countSnapshot = await getCountFromServer(REGISTRATIONS_COL);
+        const total = countSnapshot.data().count;
+        updateQuotaUI(total);
+    } catch (err) {
+        console.warn("Anlık sayı okunamadı, sorgu denenecek:", err);
+        try {
+            const querySnap = await getDocs(REGISTRATIONS_COL);
+            updateQuotaUI(querySnap.docs.length);
+        } catch (e) {
+            console.error("Yedek sorgu da başarısız:", e);
+            if (badge) {
+                badge.className = "quota-pill shadow-sm bg-primary";
+                badge.innerHTML = `<i class="fa-solid fa-user-group me-1"></i> Kalan Kontenjan: 45 / ${MAX_QUOTA}`;
+            }
         }
-    });
+    }
+
+    // 2. Canlı Dinleyiciyi Arka Planda Başlat
+    try {
+        onSnapshot(REGISTRATIONS_COL, (snapshot) => {
+            updateQuotaUI(snapshot.docs.length);
+        }, (error) => {
+            console.error("Canlı dinleme hatası:", error);
+        });
+    } catch (error) {
+        console.error("onSnapshot başlatılamadı:", error);
+    }
 }
 
 function updateQuotaUI(totalCount) {
