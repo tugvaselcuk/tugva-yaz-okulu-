@@ -1,321 +1,302 @@
-import { db, REGISTRATIONS_COL, COUNTERS_DOC } from "./firebase.js";
-import { onSnapshot, runTransaction, doc, serverTimestamp, query, where, getDocs, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { notify, formatName, cleanDoubleSpaces, calculateAge } from "./utils.js";
-import { validateTC, validatePhone } from "./validation.js";
-import { generateQR } from "./qr.js";
-import { downloadRegistrationPDF } from "./pdf.js";
-import { MAX_QUOTA } from "./config.js";
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TÜGVA Yaz Okulu Kayıt Sistemi</title>
+    
+    <!-- Google Fonts (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css?v=4.0">
+</head>
+<body>
 
-let currentCreatedData = null;
-let currentQrDataUrl = null;
+    <!-- Üst Gezinme Çubuğu -->
+    <nav class="navbar navbar-expand-lg bg-white sticky-top main-navbar">
+        <div class="container">
+            <a class="navbar-brand navbar-brand-custom" href="index.html">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <span>TÜGVA Yaz Okulu</span>
+            </a>
+            <div class="ms-auto d-flex gap-2">
+                <a href="index.html" class="btn btn-nav-custom active">
+                    <i class="fa-solid fa-pen-to-square"></i><span>Kayıt Formu</span>
+                </a>
+                <a href="admin.html" class="btn btn-nav-admin">
+                    <i class="fa-solid fa-user-shield"></i><span>Yönetici Paneli</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
-document.addEventListener('DOMContentLoaded', () => {
-    initQuota();
-    setupFormEvents();
-    loadDraftFromLocalStorage();
-});
+    <div class="container py-4 pb-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-9 col-xl-8">
+                
+                <!-- Kontenjan / Bilgilendirme Hero Banner -->
+                <div class="card hero-card mb-4 text-center overflow-hidden">
+                    <div class="hero-body p-4 p-md-5">
+                        <span class="hero-subtitle mb-2"><i class="fa-solid fa-star me-1"></i> YAZ SEZONU</span>
+                        <h2 class="fw-bold text-white mb-2">TÜGVA Yaz Okulu Kayıt Portalı</h2>
+                        <p class="hero-desc mb-4">Geleceğin liderleri burada yetişiyor. Lütfen başvuru formunu eksiksiz doldurunuz.</p>
+                        <div class="d-inline-flex align-items-center">
+                            <div class="quota-pill shadow-sm" id="quota-badge">
+                                <i class="fa-solid fa-circle-notch fa-spin me-2"></i> Kontenjan Durumu Yükleniyor...
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-// Kontenjan Bilgisini Getiren Garantili Fonksiyon
-async function initQuota() {
-    const badge = document.getElementById('quota-badge');
+                <!-- Kayıt Formu Kartı -->
+                <div class="card main-form-card shadow-lg" id="form-card">
+                    <div class="card-header-custom d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-id-card text-primary"></i> Başvuru Formu
+                            </h4>
+                            <p class="text-muted small mb-0">Yıldızlı (<span class="text-danger">*</span>) alanların doldurulması zorunludur.</p>
+                        </div>
+                        <span class="badge draft-badge" id="draft-status-indicator">
+                            <i class="fa-solid fa-cloud-arrow-up me-1"></i> Otomatik Taslak
+                        </span>
+                    </div>
 
-    // 1. Doğrudan Sunucudan Anlık Sayı Al
-    try {
-        const countSnapshot = await getCountFromServer(REGISTRATIONS_COL);
-        const total = countSnapshot.data().count;
-        updateQuotaUI(total);
-    } catch (err) {
-        console.warn("Anlık sayı okunamadı, sorgu denenecek:", err);
-        try {
-            const querySnap = await getDocs(REGISTRATIONS_COL);
-            updateQuotaUI(querySnap.docs.length);
-        } catch (e) {
-            console.error("Yedek sorgu da başarısız:", e);
-            if (badge) {
-                badge.className = "quota-pill shadow-sm bg-primary";
-                badge.innerHTML = `<i class="fa-solid fa-user-group me-1"></i> Kalan Kontenjan: 45 / ${MAX_QUOTA}`;
-            }
-        }
-    }
+                    <form id="registrationForm" class="p-4 p-md-5" onsubmit="return false;" novalidate>
+                        <div class="row g-4">
+                            
+                            <!-- 1. Kişisel Bilgiler -->
+                            <div class="col-12">
+                                <div class="form-section-card">
+                                    <div class="section-title">
+                                        <div class="section-number">1</div>
+                                        <h5>Kişisel Bilgiler</h5>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="name" class="form-label">Ad <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-user input-icon"></i>
+                                                <input type="text" class="form-control" id="name" placeholder="Örn: Ahmet" required>
+                                            </div>
+                                        </div>
 
-    // 2. Canlı Dinleyiciyi Arka Planda Başlat
-    try {
-        onSnapshot(REGISTRATIONS_COL, (snapshot) => {
-            updateQuotaUI(snapshot.docs.length);
-        }, (error) => {
-            console.error("Canlı dinleme hatası:", error);
-        });
-    } catch (error) {
-        console.error("onSnapshot başlatılamadı:", error);
-    }
-}
+                                        <div class="col-md-6">
+                                            <label for="surname" class="form-label">Soyad <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-user-tag input-icon"></i>
+                                                <input type="text" class="form-control" id="surname" placeholder="Örn: Yılmaz" required>
+                                            </div>
+                                        </div>
 
-function updateQuotaUI(totalCount) {
-    const badge = document.getElementById('quota-badge');
-    const submitBtn = document.getElementById('submitBtn');
-    if (!badge) return;
+                                        <div class="col-md-6">
+                                            <label for="tc" class="form-label">T.C. Kimlik No <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-id-badge input-icon"></i>
+                                                <input type="text" class="form-control" id="tc" maxlength="11" placeholder="11 Haneli TC No" required>
+                                            </div>
+                                        </div>
 
-    const remaining = MAX_QUOTA - totalCount;
+                                        <div class="col-md-6">
+                                            <label for="phone" class="form-label">Telefon Numarası <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-phone input-icon"></i>
+                                                <input type="tel" class="form-control" id="phone" maxlength="11" placeholder="05XXXXXXXXX" required>
+                                            </div>
+                                        </div>
 
-    if (remaining <= 0) {
-        badge.className = "quota-pill shadow-sm bg-danger text-white";
-        badge.innerHTML = `<i class="fa-solid fa-ban me-1"></i> Kontenjan Dolmuştur (0 / ${MAX_QUOTA})`;
-        if (submitBtn) submitBtn.disabled = true;
-    } else {
-        badge.className = "quota-pill shadow-sm";
-        badge.innerHTML = `<i class="fa-solid fa-user-group me-1"></i> Kalan Kontenjan: ${remaining} / ${MAX_QUOTA}`;
-        if (submitBtn) submitBtn.disabled = false;
-    }
-}
+                                        <div class="col-md-6">
+                                            <label for="birthDate" class="form-label">Doğum Tarihi <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-calendar-days input-icon"></i>
+                                                <input type="date" class="form-control" id="birthDate" required>
+                                            </div>
+                                        </div>
 
-function setupFormEvents() {
-    const birthInput = document.getElementById('birthDate');
-    const minorFields = document.getElementById('minorFields');
-    const form = document.getElementById('registrationForm');
+                                        <div class="col-md-6">
+                                            <label for="gender" class="form-label">Cinsiyet <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-venus-mars input-icon"></i>
+                                                <select class="form-select" id="gender" required>
+                                                    <option value="">Cinsiyet Seçiniz...</option>
+                                                    <option value="Erkek">Erkek</option>
+                                                    <option value="Kadın">Kadın</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-    if (birthInput && minorFields) {
-        birthInput.addEventListener('change', () => {
-            const age = calculateAge(birthInput.value);
-            if (age >= 18) {
-                minorFields.classList.add('d-none');
-            } else {
-                minorFields.classList.remove('d-none');
-            }
-        });
-    }
+                            <!-- 2. Adres Bilgileri -->
+                            <div class="col-12">
+                                <div class="form-section-card">
+                                    <div class="section-title">
+                                        <div class="section-number">2</div>
+                                        <h5>Adres Bilgileri</h5>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="district" class="form-label">İlçe <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-city input-icon"></i>
+                                                <input type="text" class="form-control" id="district" placeholder="İlçe adı" required>
+                                            </div>
+                                        </div>
 
-    if (form) {
-        form.addEventListener('input', saveDraftToLocalStorage);
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await handleFormSubmit();
-        });
-    }
+                                        <div class="col-md-6">
+                                            <label for="neighborhood" class="form-label">Mahalle <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-map-pin input-icon"></i>
+                                                <input type="text" class="form-control" id="neighborhood" placeholder="Mahalle adı" required>
+                                            </div>
+                                        </div>
 
-    const clearDraftBtn = document.getElementById('clearDraftBtn');
-    if (clearDraftBtn) {
-        clearDraftBtn.addEventListener('click', () => {
-            localStorage.removeItem('tugva_registration_draft');
-            if (form) form.reset();
-            if (minorFields) minorFields.classList.remove('d-none');
-            notify.info("Taslak ve form temizlendi.");
-        });
-    }
+                                        <div class="col-12">
+                                            <label for="address" class="form-label">Açık Adres <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-house input-icon textarea-icon"></i>
+                                                <textarea class="form-control" id="address" rows="3" placeholder="Cadde, sokak, bina ve kapı numarası..." required></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-    const downloadPdfBtn = document.getElementById('downloadPdfBtn');
-    if (downloadPdfBtn) {
-        downloadPdfBtn.addEventListener('click', async () => {
-            await downloadRegistrationPDF(currentCreatedData, currentQrDataUrl);
-        });
-    }
+                            <!-- 3. Okul ve Veli Bilgileri (18 Yaş Altı Koşullu) -->
+                            <div class="col-12" id="minorFields">
+                                <div class="form-section-card minor-section">
+                                    <div class="section-title">
+                                        <div class="section-number bg-warning text-dark">3</div>
+                                        <div>
+                                            <h5 class="mb-0">Okul ve Veli Bilgileri</h5>
+                                            <small class="text-muted fw-normal">18 yaş altı öğrenciler için doldurulması zorunludur.</small>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label for="school" class="form-label">Okul Adı <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-school input-icon"></i>
+                                                <input type="text" class="form-control" id="school" placeholder="Devam ettiği okul">
+                                            </div>
+                                        </div>
 
-    const newRegistrationBtn = document.getElementById('newRegistrationBtn');
-    if (newRegistrationBtn) {
-        newRegistrationBtn.addEventListener('click', () => {
-            document.getElementById('success-card').classList.add('d-none');
-            document.getElementById('form-card').classList.remove('d-none');
-            if (minorFields) minorFields.classList.remove('d-none');
-        });
-    }
-}
+                                        <div class="col-md-6">
+                                            <label for="className" class="form-label">Sınıf <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-chalkboard-user input-icon"></i>
+                                                <input type="text" class="form-control" id="className" placeholder="Örn: 7">
+                                            </div>
+                                        </div>
 
-function saveDraftToLocalStorage() {
-    const draft = {
-        name: document.getElementById('name')?.value || '',
-        surname: document.getElementById('surname')?.value || '',
-        tc: document.getElementById('tc')?.value || '',
-        phone: document.getElementById('phone')?.value || '',
-        birthDate: document.getElementById('birthDate')?.value || '',
-        gender: document.getElementById('gender')?.value || '',
-        district: document.getElementById('district')?.value || '',
-        neighborhood: document.getElementById('neighborhood')?.value || '',
-        address: document.getElementById('address')?.value || '',
-        school: document.getElementById('school')?.value || '',
-        className: document.getElementById('className')?.value || '',
-        parentName: document.getElementById('parentName')?.value || '',
-        parentPhone: document.getElementById('parentPhone')?.value || ''
-    };
-    localStorage.setItem('tugva_registration_draft', JSON.stringify(draft));
-}
+                                        <div class="col-md-6">
+                                            <label for="parentName" class="form-label">Veli Adı Soyadı <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-user-shield input-icon"></i>
+                                                <input type="text" class="form-control" id="parentName" placeholder="Veli Ad Soyad">
+                                            </div>
+                                        </div>
 
-function loadDraftFromLocalStorage() {
-    const saved = localStorage.getItem('tugva_registration_draft');
-    if (!saved) return;
-    try {
-        const draft = JSON.parse(saved);
-        if (document.getElementById('name')) document.getElementById('name').value = draft.name || '';
-        if (document.getElementById('surname')) document.getElementById('surname').value = draft.surname || '';
-        if (document.getElementById('tc')) document.getElementById('tc').value = draft.tc || '';
-        if (document.getElementById('phone')) document.getElementById('phone').value = draft.phone || '';
-        if (document.getElementById('birthDate')) document.getElementById('birthDate').value = draft.birthDate || '';
-        if (document.getElementById('gender')) document.getElementById('gender').value = draft.gender || '';
-        if (document.getElementById('district')) document.getElementById('district').value = draft.district || '';
-        if (document.getElementById('neighborhood')) document.getElementById('neighborhood').value = draft.neighborhood || '';
-        if (document.getElementById('address')) document.getElementById('address').value = draft.address || '';
-        if (document.getElementById('school')) document.getElementById('school').value = draft.school || '';
-        if (document.getElementById('className')) document.getElementById('className').value = draft.className || '';
-        if (document.getElementById('parentName')) document.getElementById('parentName').value = draft.parentName || '';
-        if (document.getElementById('parentPhone')) document.getElementById('parentPhone').value = draft.parentPhone || '';
+                                        <div class="col-md-6">
+                                            <label for="parentPhone" class="form-label">Veli Telefon Numarası <span class="text-danger">*</span></label>
+                                            <div class="input-group-custom">
+                                                <i class="fa-solid fa-mobile-screen-button input-icon"></i>
+                                                <input type="tel" class="form-control" id="parentPhone" maxlength="11" placeholder="05XXXXXXXXX">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-        if (draft.birthDate) {
-            const age = calculateAge(draft.birthDate);
-            const minorFields = document.getElementById('minorFields');
-            if (age >= 18 && minorFields) minorFields.classList.add('d-none');
-        }
-    } catch (e) {
-        console.error(e);
-    }
-}
+                            <!-- İşlem Butonları -->
+                            <div class="col-12 mt-4 text-end d-flex justify-content-end align-items-center gap-3">
+                                <button type="button" class="btn btn-light-custom" id="clearDraftBtn">
+                                    <i class="fa-solid fa-rotate-left me-1"></i> Formu Temizle
+                                </button>
+                                <button type="button" class="btn btn-submit-custom shadow-sm" id="submitBtn">
+                                    <span>Kayıt Ol</span> <i class="fa-solid fa-arrow-right ms-2"></i>
+                                </button>
+                            </div>
 
-async function handleFormSubmit() {
-    const name = formatName(document.getElementById('name').value);
-    const surname = formatName(document.getElementById('surname').value);
-    const tc = cleanDoubleSpaces(document.getElementById('tc').value);
-    const phone = cleanDoubleSpaces(document.getElementById('phone').value);
-    const birthDate = document.getElementById('birthDate').value;
-    const gender = document.getElementById('gender').value;
-    const district = formatName(document.getElementById('district').value);
-    const neighborhood = formatName(document.getElementById('neighborhood').value);
-    const address = cleanDoubleSpaces(document.getElementById('address').value);
+                        </div>
+                    </form>
+                </div>
 
-    const age = calculateAge(birthDate);
-    const isMinor = age < 18;
+                <!-- Başarılı Kayıt Sonrası Sonuç Kartı -->
+                <div class="card main-form-card shadow-lg p-4 p-md-5 text-center d-none" id="success-card">
+                    <div class="success-icon-wrapper mb-3">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-2">Kaydınız Alınmıştır!</h3>
+                    <p class="text-muted mb-4">Aşağıdaki giriş kartınızı indirebilir veya çıktısını alabilirsiniz.</p>
 
-    let school = "", className = "", parentName = "", parentPhone = "";
+                    <div id="printableArea" class="success-ticket-card p-4 my-3 text-start">
+                        <div class="row align-items-center g-4">
+                            <div class="col-md-8 border-end-md">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="badge bg-primary-soft text-primary fw-bold fs-6" id="res-regNumber">Kayıt No: -</span>
+                                    <span class="seat-badge" id="res-seat">Koltuk: Atanmadı</span>
+                                </div>
+                                <h4 class="fw-bold text-dark mb-3" id="res-fullName">-</h4>
+                                <ul class="list-unstyled ticket-info-list mb-0">
+                                    <li><i class="fa-solid fa-id-card me-2"></i><strong>TC Kimlik:</strong> <span id="res-tc">-</span></li>
+                                    <li><i class="fa-solid fa-phone me-2"></i><strong>Telefon:</strong> <span id="res-phone">-</span></li>
+                                    <li><i class="fa-solid fa-cake-candles me-2"></i><strong>Doğum / Yaş:</strong> <span id="res-birth">-</span></li>
+                                    <li><i class="fa-solid fa-location-dot me-2"></i><strong>Adres:</strong> <span id="res-address">-</span></li>
+                                </ul>
+                                <div id="res-minorInfo" class="mt-2 pt-2 border-top">
+                                    <ul class="list-unstyled ticket-info-list mb-0">
+                                        <li><i class="fa-solid fa-school me-2"></i><strong>Okul/Sınıf:</strong> <span id="res-school">-</span></li>
+                                        <li><i class="fa-solid fa-user-shield me-2"></i><strong>Veli:</strong> <span id="res-parent">-</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="qr-wrapper p-3 bg-white rounded shadow-sm d-inline-block">
+                                    <div id="successQrCode"></div>
+                                </div>
+                                <small class="text-muted d-block mt-2 fw-semibold">Sistem Doğrulama QR</small>
+                            </div>
+                        </div>
+                    </div>
 
-    if (isMinor) {
-        school = formatName(document.getElementById('school').value);
-        className = cleanDoubleSpaces(document.getElementById('className').value);
-        parentName = formatName(document.getElementById('parentName').value);
-        parentPhone = cleanDoubleSpaces(document.getElementById('parentPhone').value);
-    }
+                    <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
+                        <button class="btn btn-primary-custom" id="downloadPdfBtn">
+                            <i class="fa-solid fa-file-pdf me-2"></i>PDF İndir
+                        </button>
+                        <button class="btn btn-outline-secondary px-4 rounded-3" onclick="window.print()">
+                            <i class="fa-solid fa-print me-2"></i>Yazdır
+                        </button>
+                        <button class="btn btn-light-custom" id="newRegistrationBtn">
+                            <i class="fa-solid fa-plus me-2"></i>Yeni Kayıt Yap
+                        </button>
+                    </div>
+                </div>
 
-    if (!name || !surname || !tc || !phone || !birthDate || !gender || !district || !neighborhood || !address) {
-        notify.error("Lütfen zorunlu alanların tamamını doldurunuz.");
-        return;
-    }
+            </div>
+        </div>
+    </div>
 
-    if (!validateTC(tc)) {
-        notify.error("Geçersiz T.C. Kimlik Numarası girdiniz!");
-        return;
-    }
+    <!-- Kütüphaneler -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    if (!validatePhone(phone)) {
-        notify.error("Telefon numarası 05 ile başlamalı ve 11 haneli olmalıdır.");
-        return;
-    }
-
-    if (isMinor) {
-        if (!school || !className || !parentName || !parentPhone) {
-            notify.error("18 yaş altı kayıtlar için okul, sınıf ve veli bilgileri zorunludur.");
-            return;
-        }
-        if (!validatePhone(parentPhone)) {
-            notify.error("Veli telefon numarası 05 ile başlamalı ve 11 haneli olmalıdır.");
-            return;
-        }
-    }
-
-    Swal.fire({ title: 'Kayıt Yapılıyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
-
-    try {
-        // Çift TC Kontrolü
-        const qTc = query(REGISTRATIONS_COL, where("tc", "==", tc));
-        const snapTc = await getDocs(qTc);
-        if (!snapTc.empty) {
-            Swal.close();
-            notify.error("Bu TC Kimlik Numarası ile zaten kayıt bulunuyor.");
-            return;
-        }
-
-        // Çift Telefon Kontrolü
-        const qPhone = query(REGISTRATIONS_COL, where("phone", "==", phone));
-        const snapPhone = await getDocs(qPhone);
-        if (!snapPhone.empty) {
-            Swal.close();
-            notify.error("Bu Telefon Numarası ile zaten kayıt bulunuyor.");
-            return;
-        }
-
-        const newDocRef = doc(REGISTRATIONS_COL);
-
-        await runTransaction(db, async (transaction) => {
-            const counterSnap = await transaction.get(COUNTERS_DOC);
-            let lastNumber = 0;
-            if (counterSnap.exists()) {
-                lastNumber = counterSnap.data().lastNumber || 0;
-            }
-
-            if (lastNumber >= MAX_QUOTA) {
-                throw new Error("KONTENJAN_DOLU");
-            }
-
-            const nextNumber = lastNumber + 1;
-            const registerNumber = `TYO-${String(nextNumber).padStart(4, '0')}`;
-
-            const payload = {
-                registerNumber,
-                name,
-                surname,
-                tc,
-                phone,
-                birthDate,
-                age,
-                gender,
-                district,
-                neighborhood,
-                address,
-                school: isMinor ? school : "",
-                className: isMinor ? className : "",
-                parentName: isMinor ? parentName : "",
-                parentPhone: isMinor ? parentPhone : "",
-                seatNumber: "",
-                createdAt: serverTimestamp()
-            };
-
-            transaction.set(newDocRef, payload);
-            transaction.set(COUNTERS_DOC, { lastNumber: nextNumber }, { merge: true });
-
-            currentCreatedData = { id: newDocRef.id, ...payload };
-        });
-
-        localStorage.removeItem('tugva_registration_draft');
-        document.getElementById('registrationForm').reset();
-        Swal.close();
-        await showSuccessScreen(currentCreatedData);
-
-    } catch (err) {
-        console.error("Kayıt İşlemi Hatası:", err);
-        Swal.close();
-        if (err.message === "KONTENJAN_DOLU") {
-            notify.error("Kayıt başarısız! Kontenjan dolmuştur.");
-        } else {
-            notify.error("Kayıt hatası: " + (err.message || "Bilinmeyen hata"));
-        }
-    }
-}
-
-async function showSuccessScreen(data) {
-    document.getElementById('form-card').classList.add('d-none');
-    document.getElementById('success-card').classList.remove('d-none');
-
-    document.getElementById('res-regNumber').innerText = `Kayıt No: ${data.registerNumber}`;
-    document.getElementById('res-fullName').innerText = `${data.name} ${data.surname}`;
-    document.getElementById('res-tc').innerText = data.tc;
-    document.getElementById('res-phone').innerText = data.phone;
-    document.getElementById('res-birth').innerText = `${data.birthDate} (${data.age} Yaş / ${data.gender})`;
-    document.getElementById('res-address').innerText = `${data.neighborhood} Mah. ${data.district} / ${data.address}`;
-    document.getElementById('res-seat').innerText = data.seatNumber || 'Koltuk: Atanmadı';
-
-    const minorDiv = document.getElementById('res-minorInfo');
-    if (data.age < 18) {
-        minorDiv.classList.remove('d-none');
-        document.getElementById('res-school').innerText = `${data.school} - Sınıf: ${data.className}`;
-        document.getElementById('res-parent').innerText = `${data.parentName} (${data.parentPhone})`;
-    } else {
-        minorDiv.classList.add('d-none');
-    }
-
-    currentQrDataUrl = await generateQR('successQrCode', data.id);
-}
+    <!-- Modüler JS Bağlantısı -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
 
