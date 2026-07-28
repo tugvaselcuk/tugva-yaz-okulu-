@@ -1,0 +1,57 @@
+:root {
+    --primary-color: #004b87;
+    --secondary-color: #0088cc;
+    --bg-light: #f4f7f9;
+}
+
+body {
+    background-color: var(--bg-light);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+}
+
+.navbar-brand-custom {
+    font-weight: 700;
+    letter-spacing: .5px;
+    color: var(--primary-color) !important;
+}
+
+.card-custom {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    background: #fff;
+}
+
+.btn-primary-custom {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+}
+
+.btn-primary-custom:hover {
+    background-color: #003663;
+    border-color: #003663;
+    color: #fff;
+}
+
+.stat-card {
+    border-left: 4px solid var(--primary-color);
+    transition: transform 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+#reader {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+@media print {
+    body * { visibility: hidden; }
+    #printableArea, #printableArea * { visibility: visible; }
+    #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+}
