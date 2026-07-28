@@ -266,3 +266,4 @@ function showSuccessScreen(data) {
 
     generateQR('successQrCode', data.id);
 }
+
