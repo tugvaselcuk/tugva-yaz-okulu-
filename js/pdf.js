@@ -1,4 +1,3 @@
-```javascript
 export function downloadRegistrationPDF(data) {
     if (!data) return;
     const { jsPDF } = window.jspdf;
@@ -99,7 +98,7 @@ export function downloadRegistrationPDF(data) {
         docPdf.setFont("helvetica", "bold");
         docPdf.text("Okul / Sinif:", 15, startY);
         docPdf.setFont("helvetica", "normal");
-        docPdf.text(trFix(`${data.school} - SInIf: ${data.className}`), 55, startY);
+        docPdf.text(trFix(`${data.school} - Sinif: ${data.className}`), 55, startY);
 
         startY += lineHeight;
         docPdf.setFont("helvetica", "bold");
@@ -130,4 +129,3 @@ export function downloadRegistrationPDF(data) {
     docPdf.save(`TUGVA_Kayit_${data.registerNumber}.pdf`);
 }
 
-```
