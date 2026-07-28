@@ -17,7 +17,7 @@
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=5.0">
+    <link rel="stylesheet" href="css/style.css?v=6.0">
 
     <style>
         .same-surname-row {
@@ -35,10 +35,15 @@
             border: 1px solid #badbcc;
             font-weight: 700;
         }
-        .seat-badge-none {
-            background-color: #fff3cd;
-            color: #664d03;
-            border: 1px solid #ffecb5;
+        .reorder-btn-group {
+            display: inline-flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .reorder-btn-group .btn {
+            padding: 1px 5px;
+            font-size: 0.65rem;
+            line-height: 1;
         }
         #reader {
             width: 100%;
@@ -58,7 +63,7 @@
                 </div>
                 <div>
                     <span class="d-block fw-bold fs-5 leading-none">TÜGVA Yönetim Paneli</span>
-                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Kayıt & Koltuk Yönetimi</small>
+                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Finali Kayıt & Koltuk Yönetimi</small>
                 </div>
             </a>
             <div class="ms-auto d-flex gap-2">
@@ -128,6 +133,7 @@
                     <div class="col-lg-3 col-md-6">
                         <select id="sortSelect" class="form-select fw-semibold">
                             <option value="surname" selected>Sıralama: Soyadına Göre (A-Z) [Akrabalar Yan Yana]</option>
+                            <option value="custom">Sıralama: Özel Manuel Sıralama (Oklar İle Düzenlenen)</option>
                             <option value="registerNumber">Sıralama: Kayıt Numarasına Göre</option>
                             <option value="seatNumber">Sıralama: Koltuk Numarasına Göre</option>
                             <option value="name">Sıralama: Ada Göre (A-Z)</option>
@@ -170,20 +176,21 @@
                 <table class="table table-hover align-middle mb-0" id="adminTable">
                     <thead class="table-light">
                         <tr>
+                            <th scope="col" style="width: 60px;" class="text-center">Sıra</th>
                             <th scope="col" style="width: 90px;">Kayıt No</th>
                             <th scope="col">Ad Soyad</th>
-                            <th scope="col" style="width: 120px;">Koltuk No</th>
+                            <th scope="col" style="width: 110px;">Koltuk No</th>
                             <th scope="col">TC Kimlik</th>
                             <th scope="col">Telefon</th>
                             <th scope="col">Yaş / Cinsiyet</th>
                             <th scope="col">İlçe / Mahalle</th>
                             <th scope="col">Okul / Sınıf / Veli</th>
-                            <th scope="col" class="text-center" style="width: 160px;">İşlemler</th>
+                            <th scope="col" class="text-center" style="width: 190px;">İşlemler</th>
                         </tr>
                     </thead>
                     <tbody id="studentTableBody">
                         <tr>
-                            <td colspan="9" class="text-center py-5 text-muted">
+                            <td colspan="10" class="text-center py-5 text-muted">
                                 <i class="fa-solid fa-circle-notch fa-spin fa-2xl mb-3 d-block"></i>
                                 Veriler yükleniyor, lütfen bekleyiniz...
                             </td>
@@ -197,7 +204,7 @@
 
     <!-- ================= MODALLAR ================= -->
 
-    <!-- 1. Düzenleme Modalı (Koltuk Numarası ve Tüm Bilgiler) -->
+    <!-- Düzenleme Modalı -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
@@ -286,7 +293,7 @@
         </div>
     </div>
 
-    <!-- 2. Manuel QR Kod Görüntüleme, İndirme ve Yazdırma Modalı -->
+    <!-- QR Modalı -->
     <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -299,7 +306,6 @@
                         <div id="modalQrCode"></div>
                     </div>
                     <div id="qrStudentDetails" class="text-start bg-light p-3 rounded border small">
-                        <!-- Öğrenci ayrıntıları js ile gelecek -->
                     </div>
                 </div>
                 <div class="modal-footer justify-content-center bg-light">
@@ -315,13 +321,13 @@
         </div>
     </div>
 
-    <!-- 3. Kamera İle QR Okutma Modalı -->
+    <!-- Kamera QR Okutma Modalı -->
     <div class="modal fade" id="qrScanModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fw-bold"><i class="fa-solid fa-camera me-2"></i>Kamera İle QR Kod Tara</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" id="closeScanModalBtn"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body text-center p-4">
                     <div id="reader"></div>
