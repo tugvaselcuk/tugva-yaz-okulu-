@@ -7,16 +7,25 @@ import { MAX_QUOTA } from "./config.js";
 
 let registrationsList = [];
 let html5QrcodeScanner = null;
+let unsubscribeSnapshot = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Firebase Kimlik Doğrulama Dinleyicisi
     onAuthStateChanged(auth, (user) => {
+        const loginCard = document.getElementById('admin-login-card');
+        const dashboard = document.getElementById('admin-dashboard');
+
         if (user) {
-            document.getElementById('admin-login-card').classList.add('d-none');
-            document.getElementById('admin-dashboard').classList.remove('d-none');
+            if (loginCard) loginCard.classList.add('d-none');
+            if (dashboard) dashboard.classList.remove('d-none');
             startRealtimeListener();
         } else {
-            document.getElementById('admin-login-card').classList.remove('d-none');
-            document.getElementById('admin-dashboard').classList.add('d-none');
+            if (loginCard) loginCard.classList.remove('d-none');
+            if (dashboard) dashboard.classList.add('d-none');
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+                unsubscribeSnapshot = null;
+            }
         }
     });
 
@@ -24,42 +33,71 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function setupAdminEvents() {
-    document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('adminEmail').value;
-        const password = document.getElementById('adminPassword').value;
+    const loginForm = document.getElementById('adminLoginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('adminEmail').value.trim();
+            const password = document.getElementById('adminPassword').value;
 
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            notify.success("Admin girişi başarılı.");
-        } catch (err) {
-            notify.error("Giriş başarısız! E-posta veya şifre hatalı.");
-        }
-    });
+            Swal.fire({ title: 'Giriş Yapılıyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
 
-    document.getElementById('adminLogoutBtn').addEventListener('click', async () => {
-        await signOut(auth);
-        notify.info("Çıkış yapıldı.");
-    });
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                Swal.close();
+                notify.success("Yönetici girişi başarılı.");
+            } catch (err) {
+                console.error("Giriş hatası:", err);
+                Swal.close();
+                notify.error("Giriş başarısız! E-posta veya şifre hatalı.");
+            }
+        });
+    }
 
-    document.getElementById('adminSearchInput').addEventListener('input', renderAdminTable);
-    document.getElementById('adminGenderFilter').addEventListener('change', renderAdminTable);
-    document.getElementById('exportExcelBtn').addEventListener('click', exportToExcel);
-    document.getElementById('saveEditBtn').addEventListener('click', saveRegistrationEdit);
+    const logoutBtn = document.getElementById('adminLogoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                notify.info("Çıkış yapıldı.");
+            } catch (err) {
+                console.error("Çıkış hatası:", err);
+            }
+        });
+    }
+
+    const searchInput = document.getElementById('adminSearchInput');
+    if (searchInput) searchInput.addEventListener('input', renderAdminTable);
+
+    const genderFilter = document.getElementById('adminGenderFilter');
+    if (genderFilter) genderFilter.addEventListener('change', renderAdminTable);
+
+    const exportBtn = document.getElementById('exportExcelBtn');
+    if (exportBtn) exportBtn.addEventListener('click', exportToExcel);
+
+    const saveEditBtn = document.getElementById('saveEditBtn');
+    if (saveEditBtn) saveEditBtn.addEventListener('click', saveRegistrationEdit);
 
     const qrScanModalEl = document.getElementById('qrScanModal');
-    qrScanModalEl.addEventListener('shown.bs.modal', startScanner);
-    qrScanModalEl.addEventListener('hidden.bs.modal', stopScanner);
+    if (qrScanModalEl) {
+        qrScanModalEl.addEventListener('shown.bs.modal', startScanner);
+        qrScanModalEl.addEventListener('hidden.bs.modal', stopScanner);
+    }
 }
 
 function startRealtimeListener() {
-    onSnapshot(REGISTRATIONS_COL, (snapshot) => {
+    if (unsubscribeSnapshot) unsubscribeSnapshot();
+
+    unsubscribeSnapshot = onSnapshot(REGISTRATIONS_COL, (snapshot) => {
         registrationsList = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
         }));
         updateDashboardStats();
         renderAdminTable();
+    }, (error) => {
+        console.error("Admin verileri dinleme hatası:", error);
+        notify.error("Veriler yüklenirken yetki veya bağlantı hatası oluştu.");
     });
 }
 
@@ -71,18 +109,23 @@ function updateDashboardStats() {
     const unseated = total - seated;
     const remainingQuota = MAX_QUOTA - total;
 
-    document.getElementById('stat-total').innerText = total;
-    document.getElementById('stat-male').innerText = male;
-    document.getElementById('stat-female').innerText = female;
-    document.getElementById('stat-seated').innerText = seated;
-    document.getElementById('stat-unseated').innerText = unseated;
-    document.getElementById('stat-quota').innerText = remainingQuota < 0 ? 0 : remainingQuota;
+    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = total;
+    if (document.getElementById('stat-male')) document.getElementById('stat-male').innerText = male;
+    if (document.getElementById('stat-female')) document.getElementById('stat-female').innerText = female;
+    if (document.getElementById('stat-seated')) document.getElementById('stat-seated').innerText = seated;
+    if (document.getElementById('stat-unseated')) document.getElementById('stat-unseated').innerText = unseated;
+    if (document.getElementById('stat-quota')) document.getElementById('stat-quota').innerText = remainingQuota < 0 ? 0 : remainingQuota;
 }
 
 function renderAdminTable() {
     const tbody = document.getElementById('registrationsTbody');
-    const search = document.getElementById('adminSearchInput').value.toLocaleLowerCase('tr-TR');
-    const genderFilter = document.getElementById('adminGenderFilter').value;
+    if (!tbody) return;
+
+    const searchInput = document.getElementById('adminSearchInput');
+    const genderSelect = document.getElementById('adminGenderFilter');
+
+    const search = searchInput ? searchInput.value.toLocaleLowerCase('tr-TR') : '';
+    const genderFilter = genderSelect ? genderSelect.value : '';
 
     const filtered = registrationsList.filter(item => {
         const matchesSearch = 
@@ -157,7 +200,7 @@ async function saveRegistrationEdit() {
         phone: cleanDoubleSpaces(document.getElementById('editPhone').value),
         gender: document.getElementById('editGender').value,
         district: formatName(document.getElementById('editDistrict').value),
-        neighborhood: formatName(document.getElementById('editNeighborhood').value),
+        neighborhood: formatName(document.getElementById('neighborhood').value),
         address: cleanDoubleSpaces(document.getElementById('editAddress').value),
         school: formatName(document.getElementById('editSchool').value),
         className: cleanDoubleSpaces(document.getElementById('editClassName').value),
@@ -167,9 +210,12 @@ async function saveRegistrationEdit() {
 
     try {
         await updateDoc(docRef, updatePayload);
-        bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+        const modalEl = document.getElementById('editModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
         notify.success("Kayıt güncellendi.");
     } catch (err) {
+        console.error("Güncelleme hatası:", err);
         notify.error("Kayıt güncellenemedi.");
     }
 }
@@ -236,7 +282,9 @@ async function onScanSuccess(decodedText) {
         const parsed = JSON.parse(decodedText);
         if (parsed && parsed.id) {
             stopScanner();
-            bootstrap.Modal.getInstance(document.getElementById('qrScanModal')).hide();
+            const scanModalEl = document.getElementById('qrScanModal');
+            const modal = bootstrap.Modal.getInstance(scanModalEl);
+            if (modal) modal.hide();
 
             const snap = await getDoc(doc(REGISTRATIONS_COL, parsed.id));
             if (snap.exists()) {
@@ -280,3 +328,4 @@ function exportToExcel() {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Kayıtlar");
     XLSX.writeFile(workbook, `Yaz_Okulu_Kayitlar.xlsx`);
 }
+
