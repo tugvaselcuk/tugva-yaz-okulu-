@@ -1,57 +1,326 @@
+/* --- TÜGVA Yaz Okulu Modern Tema Tasarımı --- */
+
 :root {
     --primary-color: #004b87;
+    --primary-hover: #003663;
+    --primary-light: #e6f0fa;
     --secondary-color: #0088cc;
-    --bg-light: #f4f7f9;
+    --bg-body: #f4f7fc;
+    --card-border-radius: 16px;
+    --text-main: #2b3674;
+    --text-muted: #707ebe;
+    --border-color: #e2e8f0;
 }
 
 body {
-    background-color: var(--bg-light);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    color: #333;
+    background-color: var(--bg-body);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: var(--text-main);
+    line-height: 1.6;
+}
+
+/* Navigasyon Barı */
+.main-navbar {
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
 .navbar-brand-custom {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     font-weight: 700;
-    letter-spacing: .5px;
     color: var(--primary-color) !important;
+    text-decoration: none;
 }
 
-.card-custom {
+.brand-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 10px rgba(0, 75, 135, 0.25);
+}
+
+.btn-nav-custom {
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-weight: 500;
+    color: var(--text-main);
+    background-color: #f8fafc;
+    border: 1px solid var(--border-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-nav-custom:hover, .btn-nav-custom.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.btn-nav-admin {
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-weight: 500;
+    color: #334155;
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-nav-admin:hover {
+    background-color: #1e293b;
+    color: white;
+}
+
+/* Hero Kartı */
+.hero-card {
+    background: linear-gradient(135deg, #003a6b 0%, #006bb6 100%);
     border: none;
+    border-radius: var(--card-border-radius);
+    box-shadow: 0 10px 30px rgba(0, 75, 135, 0.2);
+}
+
+.hero-subtitle {
+    display: inline-block;
+    color: #7dd3fc;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+}
+
+.hero-desc {
+    color: #e0f2fe;
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.quota-pill {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Ana Form Kartı */
+.main-form-card {
+    border: none;
+    border-radius: var(--card-border-radius);
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.card-header-custom {
+    padding: 24px 32px;
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.draft-badge {
+    background-color: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+/* Form Bölüm Kartları */
+.form-section-card {
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
     border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-    background: #fff;
+    padding: 24px;
+    transition: all 0.2s;
+}
+
+.form-section-card:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+
+.minor-section {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.minor-section:hover {
+    background: #fef3c7;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.section-title h5 {
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0;
+}
+
+.section-number {
+    width: 32px;
+    height: 32px;
+    background-color: var(--primary-color);
+    color: white;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+/* Form Girdileri (Inputs) */
+.form-label {
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+}
+
+.input-group-custom {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.95rem;
+    z-index: 4;
+}
+
+.textarea-icon {
+    top: 18px;
+}
+
+.input-group-custom .form-control,
+.input-group-custom .form-select {
+    padding-left: 42px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 0.95rem;
+    height: 46px;
+    transition: all 0.2s ease-in-out;
+}
+
+.input-group-custom textarea.form-control {
+    height: auto;
+}
+
+.input-group-custom .form-control:focus,
+.input-group-custom .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(0, 75, 135, 0.1);
+}
+
+/* Butonlar */
+.btn-submit-custom {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    border: none;
+    padding: 12px 36px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s;
+}
+
+.btn-submit-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 75, 135, 0.3);
+    color: white;
+}
+
+.btn-light-custom {
+    background-color: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-weight: 600;
+}
+
+.btn-light-custom:hover {
+    background-color: #e2e8f0;
 }
 
 .btn-primary-custom {
     background-color: var(--primary-color);
-    border-color: var(--primary-color);
-    color: #fff;
+    color: white;
+    border-radius: 10px;
+    padding: 10px 24px;
+    font-weight: 600;
 }
 
 .btn-primary-custom:hover {
-    background-color: #003663;
-    border-color: #003663;
-    color: #fff;
+    background-color: var(--primary-hover);
+    color: white;
 }
 
-.stat-card {
-    border-left: 4px solid var(--primary-color);
-    transition: transform 0.2s;
+/* Başarılı Kayıt / Bilet Kartı */
+.success-icon-wrapper {
+    color: #10b981;
+    font-size: 4rem;
 }
 
-.stat-card:hover {
-    transform: translateY(-3px);
+.success-ticket-card {
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 16px;
 }
 
-#reader {
-    width: 100%;
-    max-width: 500px;
-    margin: 0 auto;
+.bg-primary-soft {
+    background-color: var(--primary-light);
 }
 
-@media print {
-    body * { visibility: hidden; }
-    #printableArea, #printableArea * { visibility: visible; }
-    #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+.seat-badge {
+    background-color: #fef3c7;
+    color: #92400e;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    border: 1px solid #fde68a;
 }
+
+.ticket-info-list li {
+    font-size: 0.95rem;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.border-end-md {
+    border-right: 1px solid #e2e8f0;
+}
+
+@media (max-width: 767.98px) {
+    .border-end-md {
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 20px;
+    }
+}
+
