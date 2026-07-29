@@ -90,7 +90,7 @@ function setupRealtimeListener() {
         console.error("Firestore okuma hatası:", error);
         const tbody = document.getElementById('studentTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Veriler yüklenirken yetki hatası oluştu. Lütfen oturumu kontrol ediniz.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="12" class="text-center text-danger py-4">Veriler yüklenirken yetki hatası oluştu. Lütfen oturumu kontrol ediniz.</td></tr>`;
         }
     });
 }
@@ -122,7 +122,7 @@ function getEffectiveGroupKey(student) {
 function processAndRenderData() {
     let result = [...allStudents];
 
-    // 1. Canlı Arama Filtresi (Ad, Soyad, TC, Tel, Kayıt No, Koltuk No, Veli Adı, Aile Grubu)
+    // 1. Canlı Arama Filtresi (Ad, Soyad, TC, Tel, Kayıt No, Koltuk No, Veli Adı, Veli Tel, Aile Grubu)
     const searchInput = document.getElementById('searchInput');
     const searchTerm = (searchInput?.value || '').trim().toLowerCase('tr');
 
@@ -135,6 +135,7 @@ function processAndRenderData() {
             (s.registerNumber || '').toLowerCase('tr').includes(searchTerm) ||
             (s.seatNumber || '').toLowerCase('tr').includes(searchTerm) ||
             (s.parentName || '').toLowerCase('tr').includes(searchTerm) ||
+            (s.parentPhone || '').includes(searchTerm) ||
             (s.familyGroup || '').toLowerCase('tr').includes(searchTerm)
         );
     }
@@ -222,7 +223,7 @@ function renderTable(students, groupCounts) {
     if (students.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="10" class="text-center py-5 text-muted">
+                <td colspan="12" class="text-center py-5 text-muted">
                     <i class="fa-solid fa-folder-open fa-2xl mb-3 d-block opacity-50"></i>
                     Aranan kriterlere uygun öğrenci bulunamadı.
                 </td>
@@ -249,11 +250,19 @@ function renderTable(students, groupCounts) {
             ? `<span class="badge seat-badge-assigned fs-6 px-2 py-1"><i class="fa-solid fa-chair me-1"></i>${student.seatNumber}</span>`
             : `<button class="btn btn-sm btn-outline-warning text-dark py-0 px-2 quick-seat-btn" data-id="${student.id}"><i class="fa-solid fa-plus me-1"></i>Koltuk Ver</button>`;
 
-        const isMinor = (student.age || 0) < 18;
-
         const familyLabel = student.familyGroup && student.familyGroup.trim() !== ''
             ? `<span class="badge bg-info-subtle text-dark border border-info fw-semibold"><i class="fa-solid fa-link me-1"></i>${student.familyGroup}</span>`
             : `<span class="text-muted small">${student.surname || ''} Ailesi</span>`;
+
+        // Veli Bilgisi (Her zaman doğrudan tabloda açık ve görünür)
+        const parentInfoHtml = (student.parentName || student.parentPhone) 
+            ? `<div class="fw-bold text-dark"><i class="fa-solid fa-user-shield me-1 text-success"></i>${student.parentName || '-'}</div><div class="small"><a href="tel:${student.parentPhone}" class="text-decoration-none text-muted">${student.parentPhone || '-'}</a></div>`
+            : `<span class="text-muted small">-</span>`;
+
+        // Okul / Sınıf
+        const schoolInfoHtml = (student.school || student.className)
+            ? `<div>${student.school || '-'}</div><span class="badge bg-light text-dark border">Sınıf: ${student.className || '-'}</span>`
+            : `<span class="text-muted small">-</span>`;
 
         html += `
             <tr class="${rowClass}">
@@ -268,17 +277,19 @@ function renderTable(students, groupCounts) {
                     ${badgeHtml}
                 </td>
                 <td>${seatHtml}</td>
-                <td>
-                    ${familyLabel}
-                    <button class="btn btn-link btn-sm p-0 ms-1 text-decoration-none join-group-btn" data-id="${student.id}" data-surname="${student.surname}" title="Gruba Bağla / Değiştir">
-                        <i class="fa-solid fa-pen-to-square text-muted"></i>
-                    </button>
-                </td>
                 <td class="font-monospace text-muted small">${student.tc || '-'}</td>
                 <td class="small"><a href="tel:${student.phone}" class="text-decoration-none text-dark fw-semibold">${student.phone || '-'}</a></td>
                 <td class="small">${student.birthDate || '-'} <br><span class="badge bg-secondary-subtle text-dark">${student.age || '-'} Yaş / ${student.gender || '-'}</span></td>
                 <td class="small text-truncate" style="max-width: 130px;" title="${student.neighborhood || ''} Mah. ${student.district || ''}">
                     ${student.district || '-'}${student.neighborhood ? ' / ' + student.neighborhood : ''}
+                </td>
+                <td class="small">${schoolInfoHtml}</td>
+                <td class="bg-light-subtle">${parentInfoHtml}</td>
+                <td>
+                    ${familyLabel}
+                    <button class="btn btn-link btn-sm p-0 ms-1 text-decoration-none join-group-btn" data-id="${student.id}" data-surname="${student.surname}" title="Gruba Bağla / Değiştir">
+                        <i class="fa-solid fa-pen-to-square text-muted"></i>
+                    </button>
                 </td>
                 <td class="text-center">
                     <div class="d-inline-flex align-items-center gap-1">
@@ -493,8 +504,8 @@ async function openQrModal(studentId) {
             <div class="col-6"><strong>TC Kimlik:</strong> ${student.tc}</div>
             <div class="col-6"><strong>Telefon:</strong> ${student.phone}</div>
             <div class="col-12"><strong>Ait Olduğu Grup:</strong> ${student.familyGroup || student.surname + ' Ailesi'}</div>
+            <div class="col-12"><strong>Veli Bilgisi:</strong> ${student.parentName || '-'} (${student.parentPhone || '-'})</div>
             <div class="col-12"><strong>Adres:</strong> ${student.neighborhood || ''} Mah. ${student.district || ''}</div>
-            ${(student.age || 0) < 18 ? `<div class="col-12 border-top pt-1 mt-1"><strong>Okul/Veli:</strong> ${student.school || '-'} / ${student.parentName || '-'} (${student.parentPhone || '-'})</div>` : ''}
         </div>
     `;
 
@@ -620,6 +631,8 @@ function setupExcelExportEvent() {
             "Adı": s.name || '',
             "TC Kimlik No": s.tc || '',
             "Telefon": s.phone || '',
+            "Veli Ad Soyad": s.parentName || '-',
+            "Veli Telefon": s.parentPhone || '-',
             "Doğum Tarihi": s.birthDate || '',
             "Yaş": s.age || '',
             "Cinsiyet": s.gender || '',
@@ -627,9 +640,7 @@ function setupExcelExportEvent() {
             "Mahalle": s.neighborhood || '',
             "Açık Adres": s.address || '',
             "Okul Adı": s.school || '-',
-            "Sınıf": s.className || '-',
-            "Veli Ad Soyad": s.parentName || '-',
-            "Veli Telefon": s.parentPhone || '-'
+            "Sınıf": s.className || '-'
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -643,6 +654,8 @@ function setupExcelExportEvent() {
             { wch: 18 }, // Adı
             { wch: 14 }, // TC
             { wch: 14 }, // Tel
+            { wch: 20 }, // Veli Ad
+            { wch: 14 }, // Veli Tel
             { wch: 12 }, // Doğum
             { wch: 6 },  // Yaş
             { wch: 10 }, // Cinsiyet
@@ -650,22 +663,20 @@ function setupExcelExportEvent() {
             { wch: 18 }, // Mahalle
             { wch: 30 }, // Adres
             { wch: 22 }, // Okul
-            { wch: 8 },  // Sınıf
-            { wch: 20 }, // Veli Ad
-            { wch: 14 }  // Veli Tel
+            { wch: 8 }   // Sınıf
         ];
         worksheet['!cols'] = columnWidths;
 
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Gruplanmis_Kayit_Listesi");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Kayit_Listesi");
 
         const today = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(workbook, `TUGVA_Yaz_Okulu_Birlesik_Kayitlar_${today}.xlsx`);
+        XLSX.writeFile(workbook, `TUGVA_Yaz_Okulu_Kayıtlar_${today}.xlsx`);
 
         Swal.fire({
             icon: 'success',
             title: 'Excel İndirildi',
-            text: `${filteredStudents.length} kayıt birleştirilmiş aile gruplarına göre indirildi.`,
+            text: `${filteredStudents.length} kayıt veli bilgileriyle birlikte indirildi.`,
             timer: 2000,
             showConfirmButton: false
         });
