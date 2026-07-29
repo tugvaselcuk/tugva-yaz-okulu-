@@ -17,7 +17,7 @@
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=8.0">
+    <link rel="stylesheet" href="css/style.css?v=9.0">
 
     <style>
         .same-family-row {
@@ -158,7 +158,7 @@
                         <div class="col-lg-3 col-md-6">
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
-                                <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Ad, soyad, TC, tel, grup adı veya koltuk ara...">
+                                <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Ad, soyad, TC, veli adı, tel veya koltuk ara...">
                             </div>
                         </div>
 
@@ -209,21 +209,23 @@
                     <table class="table table-hover align-middle mb-0" id="adminTable">
                         <thead class="table-light">
                             <tr>
-                                <th scope="col" style="width: 50px;" class="text-center">Sıra</th>
-                                <th scope="col" style="width: 90px;">Kayıt No</th>
+                                <th scope="col" style="width: 45px;" class="text-center">Sıra</th>
+                                <th scope="col" style="width: 85px;">Kayıt No</th>
                                 <th scope="col">Ad Soyad</th>
-                                <th scope="col" style="width: 110px;">Koltuk No</th>
-                                <th scope="col">Aile / Birleştirilmiş Grup</th>
+                                <th scope="col" style="width: 100px;">Koltuk No</th>
                                 <th scope="col">TC Kimlik</th>
                                 <th scope="col">Telefon</th>
-                                <th scope="col">Yaş / Cinsiyet</th>
+                                <th scope="col">Doğum / Yaş</th>
                                 <th scope="col">İlçe / Mahalle</th>
-                                <th scope="col" class="text-center" style="width: 220px;">İşlemler</th>
+                                <th scope="col">Okul / Sınıf</th>
+                                <th scope="col" class="bg-primary-subtle text-primary">Veli Adı & Telefonu</th>
+                                <th scope="col">Grup Bağlantısı</th>
+                                <th scope="col" class="text-center" style="width: 170px;">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="studentTableBody">
                             <tr>
-                                <td colspan="10" class="text-center py-5 text-muted">
+                                <td colspan="12" class="text-center py-5 text-muted">
                                     <i class="fa-solid fa-circle-notch fa-spin fa-2xl mb-3 d-block"></i>
                                     Veriler yükleniyor, lütfen bekleyiniz...
                                 </td>
@@ -239,7 +241,7 @@
 
     <!-- ================= MODALLAR ================= -->
 
-    <!-- Düzenleme Modalı (Aile/Grup Birleştirme Dahil) -->
+    <!-- Düzenleme Modalı -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
@@ -254,7 +256,7 @@
                         <!-- Manuel Grup Birleştirme Bilgisi -->
                         <div class="alert alert-info py-2 small d-flex align-items-center gap-2 mb-3">
                             <i class="fa-solid fa-people-roof fa-lg"></i>
-                            <span>Soyadı farklı olan kişileri (örneğin anne/veli veya akraba) aynı gruba bağlamak için aşağıdaki <strong>Aile / Grup Etiketi</strong> alanına aynı ismi veriniz (Örn: "Aslan Ailesi").</span>
+                            <span>Soyadı farklı olan kişileri aynı gruba bağlamak için <strong>Aile / Grup Etiketi</strong> alanına aynı ismi yazabilirsiniz (Örn: "Aslan Ailesi").</span>
                         </div>
 
                         <div class="row g-3">
@@ -319,12 +321,12 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Veli Ad Soyad</label>
-                                <input type="text" id="editParentName" class="form-control">
+                                <label class="form-label fw-bold text-success"><i class="fa-solid fa-user-shield me-1"></i>Veli Ad Soyad</label>
+                                <input type="text" id="editParentName" class="form-control border-success">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Veli Telefon</label>
-                                <input type="tel" id="editParentPhone" class="form-control" maxlength="11">
+                                <label class="form-label fw-bold text-success"><i class="fa-solid fa-phone me-1"></i>Veli Telefon</label>
+                                <input type="tel" id="editParentPhone" class="form-control border-success" maxlength="11">
                             </div>
                         </div>
                     </form>
