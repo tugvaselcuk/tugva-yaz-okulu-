@@ -1,4 +1,5 @@
-import { db, REGISTRATIONS_COL } from "./firebase.js";
+import { auth, db, REGISTRATIONS_COL } from "./firebase.js";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { onSnapshot, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { generateQR } from "./qr.js";
 import { MAX_QUOTA } from "./config.js";
@@ -7,23 +8,78 @@ let allStudents = [];
 let filteredStudents = [];
 let html5QrcodeScanner = null;
 let currentSelectedStudentForQr = null;
+let unsubscribeListener = null;
 
 document.addEventListener('DOMContentLoaded', () => {
-    initAdminPage();
-});
+    // Oturum Durumu Dinleyicisi
+    onAuthStateChanged(auth, (user) => {
+        const loginCard = document.getElementById('admin-login-card');
+        const dashboard = document.getElementById('admin-dashboard');
+        const logoutBtn = document.getElementById('adminLogoutBtn');
 
-function initAdminPage() {
-    setupRealtimeListener();
+        if (user) {
+            if (loginCard) loginCard.classList.add('d-none');
+            if (dashboard) dashboard.classList.remove('d-none');
+            if (logoutBtn) logoutBtn.classList.remove('d-none');
+            setupRealtimeListener();
+        } else {
+            if (loginCard) loginCard.classList.remove('d-none');
+            if (dashboard) dashboard.classList.add('d-none');
+            if (logoutBtn) logoutBtn.classList.add('d-none');
+            if (unsubscribeListener) {
+                unsubscribeListener();
+                unsubscribeListener = null;
+            }
+        }
+    });
+
+    setupAuthEvents();
     setupSearchAndFilterEvents();
     setupExcelExportEvent();
     setupEditFormEvent();
     setupQrModalActions();
     setupScannerEvents();
+});
+
+// Admin Giriş ve Çıkış
+function setupAuthEvents() {
+    const loginForm = document.getElementById('adminLoginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = (document.getElementById('adminEmail')?.value || '').trim();
+            const password = document.getElementById('adminPassword')?.value || '';
+
+            Swal.fire({ title: 'Giriş Yapılıyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                Swal.close();
+            } catch (err) {
+                console.error("Giriş hatası:", err);
+                Swal.close();
+                Swal.fire('Giriş Başarısız', 'E-posta adresi veya şifre hatalı.', 'error');
+            }
+        });
+    }
+
+    const logoutBtn = document.getElementById('adminLogoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+            } catch (err) {
+                console.error("Çıkış hatası:", err);
+            }
+        });
+    }
 }
 
 // Canlı Firestore Veri Dinleyicisi
 function setupRealtimeListener() {
-    onSnapshot(REGISTRATIONS_COL, (snapshot) => {
+    if (unsubscribeListener) unsubscribeListener();
+
+    unsubscribeListener = onSnapshot(REGISTRATIONS_COL, (snapshot) => {
         allStudents = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
             ...docSnap.data()
@@ -34,28 +90,42 @@ function setupRealtimeListener() {
         console.error("Firestore okuma hatası:", error);
         const tbody = document.getElementById('studentTableBody');
         if (tbody) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Veriler yüklenirken bir hata oluştu. Lütfen sayfayı yenileyiniz.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Veriler yüklenirken yetki hatası oluştu. Lütfen oturumu kontrol ediniz.</td></tr>`;
         }
     });
 }
 
-// Arama, Sıralama ve Filtre Dinleyicileri
+// Arama, Sıralama ve Filtre Dinleyicileri (Anında canlı arama tetikler)
 function setupSearchAndFilterEvents() {
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
     const seatFilterSelect = document.getElementById('seatFilterSelect');
 
-    if (searchInput) searchInput.addEventListener('input', processAndRenderData);
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            processAndRenderData();
+        });
+    }
     if (sortSelect) sortSelect.addEventListener('change', processAndRenderData);
     if (seatFilterSelect) seatFilterSelect.addEventListener('change', processAndRenderData);
 }
 
-// Verileri İşleme, Soyada ve Manuel İndekse Göre Sıralama
+// Öğrencinin Ait Olduğu Aile / Grup Anahtarını Döndüren Yardımcı
+function getEffectiveGroupKey(student) {
+    if (student.familyGroup && student.familyGroup.trim() !== '') {
+        return student.familyGroup.trim().toUpperCase('tr');
+    }
+    return (student.surname || '').trim().toUpperCase('tr');
+}
+
+// Verileri İşleme, Birleştirme ve Sıralama
 function processAndRenderData() {
     let result = [...allStudents];
 
-    // 1. Arama Filtresi
-    const searchTerm = (document.getElementById('searchInput')?.value || '').trim().toLowerCase('tr');
+    // 1. Canlı Arama Filtresi (Ad, Soyad, TC, Tel, Kayıt No, Koltuk No, Veli Adı, Aile Grubu)
+    const searchInput = document.getElementById('searchInput');
+    const searchTerm = (searchInput?.value || '').trim().toLowerCase('tr');
+
     if (searchTerm) {
         result = result.filter(s => 
             (s.name || '').toLowerCase('tr').includes(searchTerm) ||
@@ -64,7 +134,8 @@ function processAndRenderData() {
             (s.phone || '').includes(searchTerm) ||
             (s.registerNumber || '').toLowerCase('tr').includes(searchTerm) ||
             (s.seatNumber || '').toLowerCase('tr').includes(searchTerm) ||
-            (s.parentName || '').toLowerCase('tr').includes(searchTerm)
+            (s.parentName || '').toLowerCase('tr').includes(searchTerm) ||
+            (s.familyGroup || '').toLowerCase('tr').includes(searchTerm)
         );
     }
 
@@ -76,26 +147,27 @@ function processAndRenderData() {
         result = result.filter(s => !s.seatNumber || s.seatNumber.trim() === '');
     }
 
-    // 3. Soyadı Sayılarını Hesaplama (Aynı soyada sahip kaç kişi var?)
-    const surnameCounts = {};
+    // 3. Grup Sayılarını Hesaplama (Aynı grupta kaç kişi var?)
+    const groupCounts = {};
     allStudents.forEach(s => {
-        const key = (s.surname || '').trim().toUpperCase('tr');
+        const key = getEffectiveGroupKey(s);
         if (key) {
-            surnameCounts[key] = (surnameCounts[key] || 0) + 1;
+            groupCounts[key] = (groupCounts[key] || 0) + 1;
         }
     });
 
     // 4. Sıralama Mantığı
-    const sortVal = document.getElementById('sortSelect')?.value || 'surname';
+    const sortVal = document.getElementById('sortSelect')?.value || 'family';
     
     result.sort((a, b) => {
-        if (sortVal === 'surname') {
-            // Soyadı A-Z (Akrabalar yan yana)
-            const surComp = (a.surname || '').localeCompare(b.surname || '', 'tr', { sensitivity: 'base' });
-            if (surComp !== 0) return surComp;
+        if (sortVal === 'family' || sortVal === 'surname') {
+            // Aile / Grup Etiketine veya Soyadına Göre Birlikte Sırala
+            const keyA = getEffectiveGroupKey(a);
+            const keyB = getEffectiveGroupKey(b);
+            const groupComp = keyA.localeCompare(keyB, 'tr', { sensitivity: 'base' });
+            if (groupComp !== 0) return groupComp;
             return (a.name || '').localeCompare(b.name || '', 'tr', { sensitivity: 'base' });
         } else if (sortVal === 'custom') {
-            // Manuel Sıralama İndeksi
             const orderA = typeof a.displayOrder === 'number' ? a.displayOrder : 999999;
             const orderB = typeof b.displayOrder === 'number' ? b.displayOrder : 999999;
             return orderA - orderB;
@@ -105,10 +177,6 @@ function processAndRenderData() {
             return (a.registerNumber || '').localeCompare(b.registerNumber || '');
         } else if (sortVal === 'seatNumber') {
             return (a.seatNumber || 'ZZZ').localeCompare(b.seatNumber || 'ZZZ');
-        } else if (sortVal === 'dateDesc') {
-            const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-            const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-            return timeB - timeA;
         }
         return 0;
     });
@@ -116,13 +184,13 @@ function processAndRenderData() {
     filteredStudents = result;
 
     // Metrik Kartları Güncelle
-    updateStats(surnameCounts);
+    updateStats(groupCounts);
 
     // Tabloyu Yazdır
-    renderTable(filteredStudents, surnameCounts);
+    renderTable(filteredStudents, groupCounts);
 }
 
-function updateStats(surnameCounts) {
+function updateStats(groupCounts) {
     const totalEl = document.getElementById('stat-total');
     const familiesEl = document.getElementById('stat-families');
     const seatedEl = document.getElementById('stat-seated');
@@ -132,22 +200,22 @@ function updateStats(surnameCounts) {
     const badgeEl = document.getElementById('listCountBadge');
 
     const totalCount = allStudents.length;
-    const familyCount = Object.values(surnameCounts).filter(count => count > 1).length;
+    const groupCount = Object.values(groupCounts).filter(count => count > 1).length;
     const seatedCount = allStudents.filter(s => s.seatNumber && s.seatNumber.trim() !== '').length;
     const unseatedCount = totalCount - seatedCount;
     const minorCount = allStudents.filter(s => (s.age || 0) < 18).length;
     const remaining = Math.max(0, MAX_QUOTA - totalCount);
 
     if (totalEl) totalEl.innerText = totalCount;
-    if (familiesEl) familiesEl.innerText = `${familyCount} Soyad Grubu`;
+    if (familiesEl) familiesEl.innerText = `${groupCount} Grup / Aile`;
     if (seatedEl) seatedEl.innerText = seatedCount;
     if (unseatedEl) unseatedEl.innerText = unseatedCount;
     if (minorsEl) minorsEl.innerText = minorCount;
     if (remainingEl) remainingEl.innerText = `${remaining} / ${MAX_QUOTA}`;
-    if (badgeEl) badgeEl.innerText = `${filteredStudents.length} Kayıt`;
+    if (badgeEl) badgeEl.innerText = `${filteredStudents.length} Kayıt Gösteriliyor`;
 }
 
-function renderTable(students, surnameCounts) {
+function renderTable(students, groupCounts) {
     const tbody = document.getElementById('studentTableBody');
     if (!tbody) return;
 
@@ -165,14 +233,14 @@ function renderTable(students, surnameCounts) {
 
     let html = '';
     students.forEach((student, index) => {
-        const surnameKey = (student.surname || '').trim().toUpperCase('tr');
-        const countWithSameSurname = surnameCounts[surnameKey] || 0;
-        const isGrouped = countWithSameSurname > 1;
+        const groupKey = getEffectiveGroupKey(student);
+        const countInGroup = groupCounts[groupKey] || 0;
+        const isGrouped = countInGroup > 1;
 
-        const rowClass = isGrouped ? 'same-surname-row' : '';
+        const rowClass = isGrouped ? 'same-family-row' : '';
         const badgeHtml = isGrouped 
-            ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle surname-badge ms-1" title="Aynı soyadı taşıyan ${countWithSameSurname} kişi var">
-                <i class="fa-solid fa-people-group me-1"></i>${countWithSameSurname} Akraba
+            ? `<span class="badge bg-primary-subtle text-primary border border-primary-subtle family-badge ms-1" title="Aynı grupta ${countInGroup} kişi var">
+                <i class="fa-solid fa-people-roof me-1"></i>Grup (${countInGroup})
                </span>`
             : '';
 
@@ -182,6 +250,10 @@ function renderTable(students, surnameCounts) {
             : `<button class="btn btn-sm btn-outline-warning text-dark py-0 px-2 quick-seat-btn" data-id="${student.id}"><i class="fa-solid fa-plus me-1"></i>Koltuk Ver</button>`;
 
         const isMinor = (student.age || 0) < 18;
+
+        const familyLabel = student.familyGroup && student.familyGroup.trim() !== ''
+            ? `<span class="badge bg-info-subtle text-dark border border-info fw-semibold"><i class="fa-solid fa-link me-1"></i>${student.familyGroup}</span>`
+            : `<span class="text-muted small">${student.surname || ''} Ailesi</span>`;
 
         html += `
             <tr class="${rowClass}">
@@ -196,18 +268,21 @@ function renderTable(students, surnameCounts) {
                     ${badgeHtml}
                 </td>
                 <td>${seatHtml}</td>
+                <td>
+                    ${familyLabel}
+                    <button class="btn btn-link btn-sm p-0 ms-1 text-decoration-none join-group-btn" data-id="${student.id}" data-surname="${student.surname}" title="Gruba Bağla / Değiştir">
+                        <i class="fa-solid fa-pen-to-square text-muted"></i>
+                    </button>
+                </td>
                 <td class="font-monospace text-muted small">${student.tc || '-'}</td>
                 <td class="small"><a href="tel:${student.phone}" class="text-decoration-none text-dark fw-semibold">${student.phone || '-'}</a></td>
                 <td class="small">${student.birthDate || '-'} <br><span class="badge bg-secondary-subtle text-dark">${student.age || '-'} Yaş / ${student.gender || '-'}</span></td>
-                <td class="small text-truncate" style="max-width: 140px;" title="${student.neighborhood || ''} Mah. ${student.district || ''}">
+                <td class="small text-truncate" style="max-width: 130px;" title="${student.neighborhood || ''} Mah. ${student.district || ''}">
                     ${student.district || '-'}${student.neighborhood ? ' / ' + student.neighborhood : ''}
-                </td>
-                <td class="small">
-                    ${isMinor ? `<strong>Okul:</strong> ${student.school || '-'}<br><strong>Veli:</strong> ${student.parentName || '-'} (${student.parentPhone || '-'})` : '<span class="text-muted">Reşit Öğrenci</span>'}
                 </td>
                 <td class="text-center">
                     <div class="d-inline-flex align-items-center gap-1">
-                        <!-- Manuel Sıralama Butonları -->
+                        <!-- Manuel Sıralama Okları -->
                         <div class="reorder-btn-group me-1">
                             <button class="btn btn-outline-secondary move-up-btn" data-index="${index}" title="Yukarı Taşı">▲</button>
                             <button class="btn btn-outline-secondary move-down-btn" data-index="${index}" title="Aşağı Taşı">▼</button>
@@ -216,7 +291,7 @@ function renderTable(students, surnameCounts) {
                             <button class="btn btn-outline-dark qr-btn" data-id="${student.id}" title="QR Kod & İndir">
                                 <i class="fa-solid fa-qrcode"></i>
                             </button>
-                            <button class="btn btn-outline-primary edit-btn" data-id="${student.id}" title="Düzenle / Koltuk Ver">
+                            <button class="btn btn-outline-primary edit-btn" data-id="${student.id}" title="Düzenle / Koltuk & Grup Ver">
                                 <i class="fa-solid fa-pen"></i>
                             </button>
                             <button class="btn btn-outline-danger delete-btn" data-id="${student.id}" data-name="${student.name} ${student.surname}" title="Kaydı Sil">
@@ -240,6 +315,10 @@ function renderTable(students, surnameCounts) {
         btn.addEventListener('click', () => moveStudentOrder(parseInt(btn.dataset.index), 1));
     });
 
+    tbody.querySelectorAll('.join-group-btn').forEach(btn => {
+        btn.addEventListener('click', () => promptJoinGroup(btn.dataset.id, btn.dataset.surname));
+    });
+
     tbody.querySelectorAll('.qr-btn').forEach(btn => {
         btn.addEventListener('click', () => openQrModal(btn.dataset.id));
     });
@@ -257,38 +336,69 @@ function renderTable(students, surnameCounts) {
     });
 }
 
-// Manuel Sıra Kaydırma Fonksiyonu (Yukarı / Aşağı)
+// Hızlı Aile / Grup Birleştirme Penceresi
+async function promptJoinGroup(studentId, defaultSurname) {
+    const student = allStudents.find(s => s.id === studentId);
+    if (!student) return;
+
+    const { value: groupName } = await Swal.fire({
+        title: 'Aile / Grup Birleştirme',
+        text: `"${student.name} ${student.surname}" kişisini başka bir soyada veya aileye bağlamak için grup adı yazınız (Örn: "Aslan Ailesi"):`,
+        input: 'text',
+        inputValue: student.familyGroup || `${student.surname} Ailesi`,
+        showCancelButton: true,
+        confirmButtonText: 'Kaydet ve Birleştir',
+        cancelButtonText: 'İptal',
+        inputValidator: (val) => {
+            if (!val || !val.trim()) return 'Lütfen geçerli bir grup ismi giriniz!';
+        }
+    });
+
+    if (groupName) {
+        try {
+            await updateDoc(doc(REGISTRATIONS_COL, studentId), {
+                familyGroup: groupName.trim()
+            });
+            Swal.fire({ icon: 'success', title: 'Birleştirildi', text: 'Kişi gruba bağlandı.', timer: 1500, showConfirmButton: false });
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Hata', 'Grup güncellenemedi.', 'error');
+        }
+    }
+}
+
+// Manuel Sıra Kaydırma Fonksiyonu
 async function moveStudentOrder(index, direction) {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= filteredStudents.length) return;
 
-    // Dizi içindeki yerlerini değiştir
-    const currentStudent = filteredStudents[index];
-    const targetStudent = filteredStudents[targetIndex];
-
-    // Otomatik olarak 'custom' sıralama moduna al
     const sortSelect = document.getElementById('sortSelect');
     if (sortSelect) sortSelect.value = 'custom';
 
-    // Mevcut görünümdeki tüm elemanlara sıra indekslerini atayalım
+    const currentStudent = filteredStudents[index];
+    const targetStudent = filteredStudents[targetIndex];
+
+    filteredStudents[index] = targetStudent;
+    filteredStudents[targetIndex] = currentStudent;
+
+    filteredStudents.forEach((s, idx) => {
+        s.displayOrder = idx;
+    });
+
+    const groupCounts = {};
+    allStudents.forEach(s => {
+        const key = getEffectiveGroupKey(s);
+        if (key) groupCounts[key] = (groupCounts[key] || 0) + 1;
+    });
+    renderTable(filteredStudents, groupCounts);
+
     try {
-        filteredStudents.forEach((s, idx) => {
-            s.displayOrder = idx;
-        });
-
-        // İki elemanın sırasını takas et
-        currentStudent.displayOrder = targetIndex;
-        targetStudent.displayOrder = index;
-
-        // Veritabanında güncelle
         await Promise.all([
             updateDoc(doc(REGISTRATIONS_COL, currentStudent.id), { displayOrder: targetIndex }),
             updateDoc(doc(REGISTRATIONS_COL, targetStudent.id), { displayOrder: index })
         ]);
-
-        processAndRenderData();
     } catch (err) {
-        console.error("Sıra güncelleme hatası:", err);
+        console.error("Sıra kaydedilemedi:", err);
     }
 }
 
@@ -300,6 +410,7 @@ function openEditModal(studentId) {
     document.getElementById('editStudentId').value = student.id;
     document.getElementById('editRegisterNumber').value = student.registerNumber || '';
     document.getElementById('editSeatNumber').value = student.seatNumber || '';
+    document.getElementById('editFamilyGroup').value = student.familyGroup || '';
     document.getElementById('editTc').value = student.tc || '';
     document.getElementById('editName').value = student.name || '';
     document.getElementById('editSurname').value = student.surname || '';
@@ -329,6 +440,7 @@ function setupEditFormEvent() {
         const docRef = doc(REGISTRATIONS_COL, studentId);
         const updatePayload = {
             seatNumber: (document.getElementById('editSeatNumber').value || '').trim(),
+            familyGroup: (document.getElementById('editFamilyGroup').value || '').trim(),
             tc: (document.getElementById('editTc').value || '').trim(),
             name: (document.getElementById('editName').value || '').trim(),
             surname: (document.getElementById('editSurname').value || '').trim(),
@@ -352,7 +464,7 @@ function setupEditFormEvent() {
             Swal.fire({
                 icon: 'success',
                 title: 'Güncellendi',
-                text: 'Öğrenci ve koltuk bilgileri kaydedildi.',
+                text: 'Kayıt, koltuk ve aile/grup bilgisi kaydedildi.',
                 timer: 1800,
                 showConfirmButton: false
             });
@@ -372,16 +484,15 @@ async function openQrModal(studentId) {
 
     document.getElementById('qrModalTitle').innerHTML = `<i class="fa-solid fa-qrcode me-2"></i>${student.registerNumber} - QR Kod`;
     
-    // QR Kodu Çiz
     await generateQR('modalQrCode', student.id);
 
-    // Detayları Doldur
     document.getElementById('qrStudentDetails').innerHTML = `
         <div class="row g-2">
             <div class="col-6"><strong>Ad Soyad:</strong> ${student.name} ${student.surname}</div>
             <div class="col-6"><strong>Koltuk No:</strong> <span class="text-primary fw-bold">${student.seatNumber || 'Atanmadı'}</span></div>
             <div class="col-6"><strong>TC Kimlik:</strong> ${student.tc}</div>
             <div class="col-6"><strong>Telefon:</strong> ${student.phone}</div>
+            <div class="col-12"><strong>Ait Olduğu Grup:</strong> ${student.familyGroup || student.surname + ' Ailesi'}</div>
             <div class="col-12"><strong>Adres:</strong> ${student.neighborhood || ''} Mah. ${student.district || ''}</div>
             ${(student.age || 0) < 18 ? `<div class="col-12 border-top pt-1 mt-1"><strong>Okul/Veli:</strong> ${student.school || '-'} / ${student.parentName || '-'} (${student.parentPhone || '-'})</div>` : ''}
         </div>
@@ -391,7 +502,6 @@ async function openQrModal(studentId) {
     bsModal.show();
 }
 
-// QR Modalı Buton Aksiyonları (İndir / Yazdır)
 function setupQrModalActions() {
     const downloadBtn = document.getElementById('downloadQrBtn');
     const printBtn = document.getElementById('printQrBtn');
@@ -423,7 +533,6 @@ function setupQrModalActions() {
     }
 }
 
-// Kamera İle QR Okutma
 function setupScannerEvents() {
     const qrScanModalEl = document.getElementById('qrScanModal');
     if (!qrScanModalEl) return;
@@ -469,7 +578,6 @@ function setupScannerEvents() {
     });
 }
 
-// Silme Onayı
 function confirmDeleteStudent(studentId, fullName) {
     Swal.fire({
         title: 'Silmek İstiyor musunuz?',
@@ -486,13 +594,13 @@ function confirmDeleteStudent(studentId, fullName) {
                 await deleteDoc(doc(REGISTRATIONS_COL, studentId));
                 Swal.fire('Silindi!', 'Kayıt silindi.', 'success');
             } catch (err) {
-                Swal.fire('Hata!', 'Silme işlemi başarısız.', 'error');
+                Swal.fire('Hata!', 'Silme işlemi başarısız oldu.', 'error');
             }
         }
     });
 }
 
-// Excel Dışa Aktarma (Ekrandaki Canlı Sıraya Birebir Uygun)
+// Excel Dışa Aktarma
 function setupExcelExportEvent() {
     const exportBtn = document.getElementById('exportExcelBtn');
     if (!exportBtn) return;
@@ -503,9 +611,9 @@ function setupExcelExportEvent() {
             return;
         }
 
-        // Ekrandaki tam dizilime göre Excel verisi hazırlar
         const excelData = filteredStudents.map((s, index) => ({
             "Sıra No": index + 1,
+            "Aile / Birleştirilmiş Grup": s.familyGroup || `${s.surname} Ailesi`,
             "Kayıt No": s.registerNumber || '',
             "Koltuk No": s.seatNumber || 'Atanmadı',
             "Soyadı": (s.surname || '').toUpperCase('tr'),
@@ -528,6 +636,7 @@ function setupExcelExportEvent() {
 
         const columnWidths = [
             { wch: 8 },  // Sıra
+            { wch: 22 }, // Aile/Grup
             { wch: 12 }, // Kayıt No
             { wch: 14 }, // Koltuk No
             { wch: 18 }, // Soyadı
@@ -548,15 +657,15 @@ function setupExcelExportEvent() {
         worksheet['!cols'] = columnWidths;
 
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Kayıt_Listesi");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Gruplanmis_Kayit_Listesi");
 
         const today = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(workbook, `TUGVA_Yaz_Okulu_Kayıtlar_${today}.xlsx`);
+        XLSX.writeFile(workbook, `TUGVA_Yaz_Okulu_Birlesik_Kayitlar_${today}.xlsx`);
 
         Swal.fire({
             icon: 'success',
             title: 'Excel İndirildi',
-            text: `${filteredStudents.length} kayıt mevcut sıralama düzeniyle indirildi.`,
+            text: `${filteredStudents.length} kayıt birleştirilmiş aile gruplarına göre indirildi.`,
             timer: 2000,
             showConfirmButton: false
         });
