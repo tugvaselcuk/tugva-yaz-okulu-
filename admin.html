@@ -17,14 +17,14 @@
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=6.0">
+    <link rel="stylesheet" href="css/style.css?v=8.0">
 
     <style>
-        .same-surname-row {
+        .same-family-row {
             background-color: #f0f7ff !important;
             border-left: 4px solid #004b87 !important;
         }
-        .surname-badge {
+        .family-badge {
             font-size: 0.72rem;
             padding: 0.25em 0.6em;
             border-radius: 50rem;
@@ -41,7 +41,7 @@
             gap: 1px;
         }
         .reorder-btn-group .btn {
-            padding: 1px 5px;
+            padding: 1px 6px;
             font-size: 0.65rem;
             line-height: 1;
         }
@@ -63,10 +63,13 @@
                 </div>
                 <div>
                     <span class="d-block fw-bold fs-5 leading-none">TÜGVA Yönetim Paneli</span>
-                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Finali Kayıt & Koltuk Yönetimi</small>
+                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Kayıt, Koltuk & Grup Yönetimi</small>
                 </div>
             </a>
-            <div class="ms-auto d-flex gap-2">
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <button class="btn btn-outline-danger btn-sm rounded-pill px-3 d-none" id="adminLogoutBtn">
+                    <i class="fa-solid fa-right-from-bracket me-1"></i> Çıkış Yap
+                </button>
                 <a href="index.html" class="btn btn-outline-primary btn-sm rounded-pill px-3">
                     <i class="fa-solid fa-pen-to-square me-1"></i> Kayıt Formuna Git
                 </a>
@@ -76,145 +79,184 @@
 
     <div class="container-fluid px-4 py-4">
         
-        <!-- Özet İstatistik Kartları -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-4 col-lg-2">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                    <small class="text-muted fw-semibold">Toplam Kayıt</small>
-                    <h3 class="fw-bold mb-0 text-primary mt-1" id="stat-total">0</h3>
-                </div>
-            </div>
-            <div class="col-md-4 col-lg-2">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                    <small class="text-muted fw-semibold">Aynı Soyad Grupları</small>
-                    <h3 class="fw-bold mb-0 text-info mt-1" id="stat-families">0</h3>
-                </div>
-            </div>
-            <div class="col-md-4 col-lg-2">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                    <small class="text-muted fw-semibold">Koltuk Atanmış</small>
-                    <h3 class="fw-bold mb-0 text-success mt-1" id="stat-seated">0</h3>
-                </div>
-            </div>
-            <div class="col-md-4 col-lg-2">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                    <small class="text-muted fw-semibold">Koltuk Bekleyen</small>
-                    <h3 class="fw-bold mb-0 text-warning mt-1" id="stat-unseated">0</h3>
-                </div>
-            </div>
-            <div class="col-md-4 col-lg-2">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                    <small class="text-muted fw-semibold">18 Yaş Altı</small>
-                    <h3 class="fw-bold mb-0 text-secondary mt-1" id="stat-minors">0</h3>
-                </div>
-            </div>
-            <div class="col-md-4 col-lg-2">
-                <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
-                    <small class="text-muted fw-semibold">Kalan Kontenjan</small>
-                    <h3 class="fw-bold mb-0 text-danger mt-1" id="stat-remaining">0</h3>
-                </div>
-            </div>
-        </div>
+        <!-- YÖNETİCİ GİRİŞ KARTI -->
+        <div class="row justify-content-center py-5" id="admin-login-card">
+            <div class="col-md-5 col-lg-4">
+                <div class="card border-0 shadow-lg rounded-4 p-4 bg-white text-center">
+                    <div class="brand-icon mx-auto mb-3" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-1">Yönetici Girişi</h4>
+                    <p class="text-muted small mb-4">Panele erişmek için admin e-posta ve şifrenizi giriniz.</p>
 
-        <!-- Filtreleme, Sıralama ve İşlem Çubuğu -->
-        <div class="card border-0 shadow-sm rounded-3 mb-4">
-            <div class="card-body p-3">
-                <div class="row g-3 align-items-center">
-                    
-                    <!-- Arama Çubuğu -->
-                    <div class="col-lg-3 col-md-6">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
-                            <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Ad, soyad, TC, tel veya koltuk no ile ara...">
+                    <form id="adminLoginForm">
+                        <div class="mb-3 text-start">
+                            <label for="adminEmail" class="form-label fw-semibold small text-muted">E-Posta Adresi</label>
+                            <input type="email" class="form-control py-2" id="adminEmail" placeholder="admin@tugva.org" required>
                         </div>
-                    </div>
-
-                    <!-- Sıralama Seçeneği -->
-                    <div class="col-lg-3 col-md-6">
-                        <select id="sortSelect" class="form-select fw-semibold">
-                            <option value="surname" selected>Sıralama: Soyadına Göre (A-Z) [Akrabalar Yan Yana]</option>
-                            <option value="custom">Sıralama: Özel Manuel Sıralama (Oklar İle Düzenlenen)</option>
-                            <option value="registerNumber">Sıralama: Kayıt Numarasına Göre</option>
-                            <option value="seatNumber">Sıralama: Koltuk Numarasına Göre</option>
-                            <option value="name">Sıralama: Ada Göre (A-Z)</option>
-                            <option value="dateDesc">Sıralama: En Yeni Kayıttan En Eskiye</option>
-                        </select>
-                    </div>
-
-                    <!-- Koltuk Durumu Filtresi -->
-                    <div class="col-lg-2 col-md-6">
-                        <select id="seatFilterSelect" class="form-select">
-                            <option value="all">Tüm Koltuk Durumları</option>
-                            <option value="seated">Sadece Koltuğu Atanmışlar</option>
-                            <option value="unseated">Sadece Koltuğu Atanmamışlar</option>
-                        </select>
-                    </div>
-
-                    <!-- Hızlı İşlem Butonları -->
-                    <div class="col-lg-4 col-md-6 text-end d-flex gap-2 justify-content-end">
-                        <button class="btn btn-outline-dark btn-sm px-3 fw-semibold d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#qrScanModal">
-                            <i class="fa-solid fa-camera"></i> QR Kod Okut
+                        <div class="mb-4 text-start">
+                            <label for="adminPassword" class="form-label fw-semibold small text-muted">Şifre</label>
+                            <input type="password" class="form-control py-2" id="adminPassword" placeholder="••••••••" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-3 shadow-sm">
+                            <i class="fa-solid fa-right-to-bracket me-1"></i> Giriş Yap
                         </button>
-                        <button id="exportExcelBtn" class="btn btn-success btn-sm px-3 fw-semibold d-inline-flex align-items-center gap-2">
-                            <i class="fa-solid fa-file-excel"></i> Excel İndir (.xlsx)
-                        </button>
-                    </div>
-
+                    </form>
                 </div>
             </div>
         </div>
 
-        <!-- Kayıtlı Öğrenci Listesi Tablosu -->
-        <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
-                <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
-                    <i class="fa-solid fa-list-check text-primary"></i> Kayıtlı Öğrenci ve Koltuk Listesi
-                </h5>
-                <span class="badge bg-secondary rounded-pill" id="listCountBadge">0 Kayıt</span>
+        <!-- YÖNETİCİ DASHBOARD VE İÇERİK -->
+        <div id="admin-dashboard" class="d-none">
+            
+            <!-- Özet İstatistik Kartları -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <small class="text-muted fw-semibold">Toplam Kayıt</small>
+                        <h3 class="fw-bold mb-0 text-primary mt-1" id="stat-total">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <small class="text-muted fw-semibold">Aile / Grup Sayısı</small>
+                        <h3 class="fw-bold mb-0 text-info mt-1" id="stat-families">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <small class="text-muted fw-semibold">Koltuk Atanmış</small>
+                        <h3 class="fw-bold mb-0 text-success mt-1" id="stat-seated">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <small class="text-muted fw-semibold">Koltuk Bekleyen</small>
+                        <h3 class="fw-bold mb-0 text-warning mt-1" id="stat-unseated">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <small class="text-muted fw-semibold">18 Yaş Altı</small>
+                        <h3 class="fw-bold mb-0 text-secondary mt-1" id="stat-minors">0</h3>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-2">
+                    <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
+                        <small class="text-muted fw-semibold">Kalan Kontenjan</small>
+                        <h3 class="fw-bold mb-0 text-danger mt-1" id="stat-remaining">0</h3>
+                    </div>
+                </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="adminTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col" style="width: 60px;" class="text-center">Sıra</th>
-                            <th scope="col" style="width: 90px;">Kayıt No</th>
-                            <th scope="col">Ad Soyad</th>
-                            <th scope="col" style="width: 110px;">Koltuk No</th>
-                            <th scope="col">TC Kimlik</th>
-                            <th scope="col">Telefon</th>
-                            <th scope="col">Yaş / Cinsiyet</th>
-                            <th scope="col">İlçe / Mahalle</th>
-                            <th scope="col">Okul / Sınıf / Veli</th>
-                            <th scope="col" class="text-center" style="width: 190px;">İşlemler</th>
-                        </tr>
-                    </thead>
-                    <tbody id="studentTableBody">
-                        <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
-                                <i class="fa-solid fa-circle-notch fa-spin fa-2xl mb-3 d-block"></i>
-                                Veriler yükleniyor, lütfen bekleyiniz...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+
+            <!-- Filtreleme, Sıralama ve İşlem Çubuğu -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body p-3">
+                    <div class="row g-3 align-items-center">
+                        
+                        <!-- Arama Çubuğu -->
+                        <div class="col-lg-3 col-md-6">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Ad, soyad, TC, tel, grup adı veya koltuk ara...">
+                            </div>
+                        </div>
+
+                        <!-- Sıralama Seçeneği -->
+                        <div class="col-lg-3 col-md-6">
+                            <select id="sortSelect" class="form-select fw-semibold">
+                                <option value="family" selected>Sıralama: Aile / Birleştirilmiş Gruplara Göre [Önerilen]</option>
+                                <option value="surname">Sıralama: Soyadına Göre (A-Z)</option>
+                                <option value="custom">Sıralama: Özel Manuel Sıralama (Oklar İle)</option>
+                                <option value="registerNumber">Sıralama: Kayıt Numarasına Göre</option>
+                                <option value="seatNumber">Sıralama: Koltuk Numarasına Göre</option>
+                                <option value="name">Sıralama: Ada Göre (A-Z)</option>
+                            </select>
+                        </div>
+
+                        <!-- Koltuk Durumu Filtresi -->
+                        <div class="col-lg-2 col-md-6">
+                            <select id="seatFilterSelect" class="form-select">
+                                <option value="all">Tüm Koltuk Durumları</option>
+                                <option value="seated">Sadece Koltuğu Atanmışlar</option>
+                                <option value="unseated">Sadece Koltuğu Atanmamışlar</option>
+                            </select>
+                        </div>
+
+                        <!-- Hızlı İşlem Butonları -->
+                        <div class="col-lg-4 col-md-6 text-end d-flex gap-2 justify-content-end">
+                            <button class="btn btn-outline-dark btn-sm px-3 fw-semibold d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#qrScanModal">
+                                <i class="fa-solid fa-camera"></i> QR Kod Okut
+                            </button>
+                            <button id="exportExcelBtn" class="btn btn-success btn-sm px-3 fw-semibold d-inline-flex align-items-center gap-2">
+                                <i class="fa-solid fa-file-excel"></i> Excel İndir (.xlsx)
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
             </div>
+
+            <!-- Kayıtlı Öğrenci Listesi Tablosu -->
+            <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                    <h5 class="fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-list-check text-primary"></i> Öğrenci, Veli ve Koltuk Listesi
+                    </h5>
+                    <span class="badge bg-secondary rounded-pill" id="listCountBadge">0 Kayıt</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="adminTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 50px;" class="text-center">Sıra</th>
+                                <th scope="col" style="width: 90px;">Kayıt No</th>
+                                <th scope="col">Ad Soyad</th>
+                                <th scope="col" style="width: 110px;">Koltuk No</th>
+                                <th scope="col">Aile / Birleştirilmiş Grup</th>
+                                <th scope="col">TC Kimlik</th>
+                                <th scope="col">Telefon</th>
+                                <th scope="col">Yaş / Cinsiyet</th>
+                                <th scope="col">İlçe / Mahalle</th>
+                                <th scope="col" class="text-center" style="width: 220px;">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentTableBody">
+                            <tr>
+                                <td colspan="10" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-circle-notch fa-spin fa-2xl mb-3 d-block"></i>
+                                    Veriler yükleniyor, lütfen bekleyiniz...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
         </div>
 
     </div>
 
     <!-- ================= MODALLAR ================= -->
 
-    <!-- Düzenleme Modalı -->
+    <!-- Düzenleme Modalı (Aile/Grup Birleştirme Dahil) -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content border-0 shadow">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Kayıt ve Koltuk Düzenle</h5>
+                    <h5 class="modal-title fw-bold"><i class="fa-solid fa-user-pen me-2"></i>Kayıt, Koltuk & Grup Düzenle</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body p-4">
                     <form id="editForm">
                         <input type="hidden" id="editStudentId">
+                        
+                        <!-- Manuel Grup Birleştirme Bilgisi -->
+                        <div class="alert alert-info py-2 small d-flex align-items-center gap-2 mb-3">
+                            <i class="fa-solid fa-people-roof fa-lg"></i>
+                            <span>Soyadı farklı olan kişileri (örneğin anne/veli veya akraba) aynı gruba bağlamak için aşağıdaki <strong>Aile / Grup Etiketi</strong> alanına aynı ismi veriniz (Örn: "Aslan Ailesi").</span>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Kayıt Numarası</label>
@@ -225,15 +267,19 @@
                                 <input type="text" id="editSeatNumber" class="form-control border-primary fw-bold" placeholder="Örn: A-12 veya S-05">
                             </div>
                             <div class="col-md-4">
+                                <label class="form-label fw-bold text-info"><i class="fa-solid fa-link me-1"></i>Aile / Grup Etiketi</label>
+                                <input type="text" id="editFamilyGroup" class="form-control border-info fw-semibold" placeholder="Örn: Aslan Grubu">
+                            </div>
+
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">TC Kimlik No</label>
                                 <input type="text" id="editTc" class="form-control" maxlength="11" required>
                             </div>
-
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">Ad</label>
                                 <input type="text" id="editName" class="form-control" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label fw-semibold">Soyad</label>
                                 <input type="text" id="editSurname" class="form-control" required>
                             </div>
