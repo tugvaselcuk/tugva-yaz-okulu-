@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TÜGVA Yaz Okulu - Yönetici Paneli</title>
     
-    <!-- Google Fonts (Inter) -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
     <!-- SweetAlert2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=11.0">
+    <link rel="stylesheet" href="css/style.css?v=12.0">
 
     <style>
         .same-family-row {
@@ -63,7 +63,7 @@
                 </div>
                 <div>
                     <span class="d-block fw-bold fs-5 leading-none">TÜGVA Yönetim Paneli</span>
-                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Kayıt, Koltuk & Grup Yönetimi</small>
+                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Kayıt, Koltuk & Aile Yönetimi</small>
                 </div>
             </a>
             <div class="ms-auto d-flex gap-2 align-items-center">
@@ -79,17 +79,17 @@
 
     <div class="container-fluid px-4 py-4">
         
-        <!-- YÖNETİCİ GİRİŞ KARTI -->
+        <!-- YÖNETİCİ GİRİŞ KARTI (Oturum Açılmamışsa Görünür) -->
         <div class="row justify-content-center py-5" id="admin-login-card">
             <div class="col-md-5 col-lg-4">
                 <div class="card border-0 shadow-lg rounded-4 p-4 bg-white text-center">
-                    <div class="brand-icon mx-auto mb-3" style="width: 50px; height: 50px; font-size: 1.5rem;">
+                    <div class="brand-icon mx-auto mb-3" style="width: 55px; height: 55px; font-size: 1.6rem; border-radius: 14px;">
                         <i class="fa-solid fa-user-shield"></i>
                     </div>
                     <h4 class="fw-bold text-dark mb-1">Yönetici Girişi</h4>
                     <p class="text-muted small mb-4">Panele erişmek için admin e-posta ve şifrenizi giriniz.</p>
 
-                    <form id="adminLoginForm">
+                    <form id="adminLoginForm" autocomplete="on">
                         <div class="mb-3 text-start">
                             <label for="adminEmail" class="form-label fw-semibold small text-muted">E-Posta Adresi</label>
                             <input type="email" class="form-control py-2" id="adminEmail" placeholder="admin@tugva.org" required>
@@ -98,7 +98,7 @@
                             <label for="adminPassword" class="form-label fw-semibold small text-muted">Şifre</label>
                             <input type="password" class="form-control py-2" id="adminPassword" placeholder="••••••••" required>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-3 shadow-sm">
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold rounded-3 shadow-sm" id="loginSubmitBtn">
                             <i class="fa-solid fa-right-to-bracket me-1"></i> Giriş Yap
                         </button>
                     </form>
@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <!-- YÖNETİCİ DASHBOARD VE İÇERİK -->
+        <!-- YÖNETİCİ DASHBOARD VE İÇERİK (Giriş Yapılınca Açılır) -->
         <div id="admin-dashboard" class="d-none">
             
             <!-- Özet İstatistik Kartları -->
@@ -239,7 +239,7 @@
 
     </div>
 
-    <!-- ================= MODALLAR ================= -->
+    <!-- MODALLAR -->
 
     <!-- Düzenleme Modalı -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
