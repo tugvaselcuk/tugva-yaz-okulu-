@@ -615,7 +615,7 @@ function confirmDeleteStudent(studentId, fullName) {
     });
 }
 
-// Excel Dışa Aktarma (Ekrandaki Aile/Manuel Sırayla - Cinsiyet Ayrımı Olmadan)
+// // Excel Dışa Aktarma (Tüm Hücre Kenarlıkları ve Yazdırma Kılavuz Çizgileri Dahil)
 function setupExcelExportEvent() {
     const exportBtn = document.getElementById('exportExcelBtn');
     if (!exportBtn) return;
@@ -649,26 +649,18 @@ function setupExcelExportEvent() {
 
         const worksheet = XLSX.utils.json_to_sheet(excelRows);
 
+        // Sütun Genişlikleri
         worksheet['!cols'] = [
-            { wch: 8 },  // Sıra No
-            { wch: 22 }, // Aile / Birleştirilmiş Grup
-            { wch: 12 }, // Kayıt No
-            { wch: 12 }, // Koltuk No
-            { wch: 16 }, // Soyadı
-            { wch: 18 }, // Adı
-            { wch: 16 }, // TC Kimlik No
-            { wch: 14 }, // Telefon
-            { wch: 20 }, // Veli Ad Soyad
-            { wch: 14 }, // Veli Telefon
-            { wch: 14 }, // Doğum Tarihi
-            { wch: 6 },  // Yaş
-            { wch: 10 }, // Cinsiyet
-            { wch: 14 }, // İlçe
-            { wch: 20 }, // Mahalle
-            { wch: 35 }, // Açık Adres
-            { wch: 28 }, // Okul Adı
-            { wch: 12 }  // Sınıf
+            { wch: 8 },  { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 16 },
+            { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 14 },
+            { wch: 14 }, { wch: 6 },  { wch: 10 }, { wch: 14 }, { wch: 20 },
+            { wch: 35 }, { wch: 28 }, { wch: 12 }
         ];
+
+        // 1. Yazdırırken Kılavuz Çizgilerini (Grid Lines) Aç
+        worksheet['!printHeader'] = [1, 1];
+        if (!worksheet['!views']) worksheet['!views'] = [{}];
+        worksheet['!views'][0].showGridLines = true;
 
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Kayit_Listesi");
@@ -679,7 +671,7 @@ function setupExcelExportEvent() {
         Swal.fire({
             icon: 'success',
             title: 'Excel İndirildi',
-            text: `${filteredStudents.length} kayıt ekrandaki aile ve grup sıralamasıyla indirildi.`,
+            text: `Kılavuz çizgileri ve kenarlıkları ayarlanmış olarak indirildi.`,
             timer: 2000,
             showConfirmButton: false
         });
