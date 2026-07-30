@@ -1,4 +1,4 @@
-// Excel Dışa Aktarma (Ekrandaki Aile/Manuel Sıraya Birebir Sadık Kalınarak)
+// Excel Dışa Aktarma (Cinsiyet Ayrımı Olmadan - Ekrandaki Aile/Grup Sırasıyla)
 function setupExcelExportEvent() {
     const exportBtn = document.getElementById('exportExcelBtn');
     if (!exportBtn) return;
@@ -9,7 +9,7 @@ function setupExcelExportEvent() {
             return;
         }
 
-        // Ekrandaki güncel sırayı cinsiyet ayırmadan birebir doğrudan aktar
+        // Ekrandaki canlı aile/manuel sıralamayı birebir aktarır
         const excelRows = filteredStudents.map((s, index) => ({
             "Sıra No": index + 1,
             "Aile / Birleştirilmiş Grup": s.familyGroup || `${s.surname} Ailesi`,
