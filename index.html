@@ -1,302 +1,230 @@
+```html
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TÜGVA Yaz Okulu Kayıt Sistemi</title>
-    
-    <!-- Google Fonts (Inter) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap 5 CSS -->
+    <title>TÜGVA Selçuk - Çizgili Excel Portalı</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- FontAwesome Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- SweetAlert2 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="css/style.css?v=4.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #004b87;
+            --excel-green: #107c41;
+            --bg-body: #f4f7fc;
+        }
+        body {
+            background-color: var(--bg-body);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #2b3674;
+        }
+        .header-card {
+            background: linear-gradient(135deg, #003a6b 0%, #006bb6 100%);
+            color: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 75, 135, 0.2);
+        }
+        .main-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+            background: #ffffff;
+        }
+        .btn-excel {
+            background-color: var(--excel-green);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-excel:hover {
+            background-color: #0b5c30;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(16, 124, 65, 0.3);
+        }
+        .table-custom {
+            font-size: 0.85rem;
+        }
+        .table-custom th {
+            background-color: #004b87;
+            color: #ffffff;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+    </style>
 </head>
-<body>
+<body class="py-4">
 
-    <!-- Üst Gezinme Çubuğu -->
-    <nav class="navbar navbar-expand-lg bg-white sticky-top main-navbar">
-        <div class="container">
-            <a class="navbar-brand navbar-brand-custom" href="index.html">
-                <div class="brand-icon">
-                    <i class="fa-solid fa-graduation-cap"></i>
+    <div class="container-fluid px-4">
+        <div class="header-card p-4 mb-4">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h3 class="fw-bold mb-1"><i class="fa-solid fa-file-excel me-2"></i>TÜGVA Selçuk - Çizgili Excel İndirme Portalı</h3>
+                    <p class="mb-0 text-white-50">Yazdırırken satır ve sütun çizgileri (kenarlıklar) görünecek şekilde yapılandırılmıştır.</p>
                 </div>
-                <span>TÜGVA Yaz Okulu</span>
-            </a>
-            <div class="ms-auto d-flex gap-2">
-                <a href="index.html" class="btn btn-nav-custom active">
-                    <i class="fa-solid fa-pen-to-square"></i><span>Kayıt Formu</span>
-                </a>
-                <a href="admin.html" class="btn btn-nav-admin">
-                    <i class="fa-solid fa-user-shield"></i><span>Yönetici Paneli</span>
-                </a>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <button class="btn btn-excel shadow" onclick="downloadFullExcel()">
+                        <i class="fa-solid fa-file-arrow-down me-2"></i>.XLSX İndir
+                    </button>
+                </div>
             </div>
         </div>
-    </nav>
 
-    <div class="container py-4 pb-5">
-        <div class="row justify-content-center">
-            <div class="col-lg-9 col-xl-8">
-                
-                <!-- Kontenjan / Bilgilendirme Hero Banner -->
-                <div class="card hero-card mb-4 text-center overflow-hidden">
-                    <div class="hero-body p-4 p-md-5">
-                        <span class="hero-subtitle mb-2"><i class="fa-solid fa-star me-1"></i> YAZ SEZONU</span>
-                        <h2 class="fw-bold text-white mb-2">TÜGVA Yaz Okulu Finali Kayıt Portalı</h2>
-                        <p class="hero-desc mb-4">Geleceğin liderleri burada yetişiyor. Lütfen başvuru formunu eksiksiz doldurunuz.</p>
-                        <div class="d-inline-flex align-items-center">
-                            <div class="quota-pill shadow-sm" id="quota-badge">
-                                <i class="fa-solid fa-circle-notch fa-spin me-2"></i> Kontenjan Durumu Yükleniyor...
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Kayıt Formu Kartı -->
-                <div class="card main-form-card shadow-lg" id="form-card">
-                    <div class="card-header-custom d-flex justify-content-between align-items-center">
-                        <div>
-                            <h4 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
-                                <i class="fa-solid fa-id-card text-primary"></i> Başvuru Formu
-                            </h4>
-                            <p class="text-muted small mb-0">Yıldızlı (<span class="text-danger">*</span>) alanların doldurulması zorunludur.</p>
-                        </div>
-                        <span class="badge draft-badge" id="draft-status-indicator">
-                            <i class="fa-solid fa-cloud-arrow-up me-1"></i> Otomatik Taslak
-                        </span>
-                    </div>
-
-                    <form id="registrationForm" class="p-4 p-md-5" onsubmit="return false;" novalidate>
-                        <div class="row g-4">
-                            
-                            <!-- 1. Kişisel Bilgiler -->
-                            <div class="col-12">
-                                <div class="form-section-card">
-                                    <div class="section-title">
-                                        <div class="section-number">1</div>
-                                        <h5>Kişisel Bilgiler</h5>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="name" class="form-label">Ad <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-user input-icon"></i>
-                                                <input type="text" class="form-control" id="name" placeholder="Örn: Ahmet" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="surname" class="form-label">Soyad <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-user-tag input-icon"></i>
-                                                <input type="text" class="form-control" id="surname" placeholder="Örn: Yılmaz" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="tc" class="form-label">T.C. Kimlik No <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-id-badge input-icon"></i>
-                                                <input type="text" class="form-control" id="tc" maxlength="11" placeholder="11 Haneli TC No" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="phone" class="form-label">Telefon Numarası <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-phone input-icon"></i>
-                                                <input type="tel" class="form-control" id="phone" maxlength="11" placeholder="05XXXXXXXXX" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="birthDate" class="form-label">Doğum Tarihi <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-calendar-days input-icon"></i>
-                                                <input type="date" class="form-control" id="birthDate" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="gender" class="form-label">Cinsiyet <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-venus-mars input-icon"></i>
-                                                <select class="form-select" id="gender" required>
-                                                    <option value="">Cinsiyet Seçiniz...</option>
-                                                    <option value="Erkek">Erkek</option>
-                                                    <option value="Kadın">Kadın</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 2. Adres Bilgileri -->
-                            <div class="col-12">
-                                <div class="form-section-card">
-                                    <div class="section-title">
-                                        <div class="section-number">2</div>
-                                        <h5>Adres Bilgileri</h5>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="district" class="form-label">İlçe <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-city input-icon"></i>
-                                                <input type="text" class="form-control" id="district" placeholder="İlçe adı" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="neighborhood" class="form-label">Mahalle <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-map-pin input-icon"></i>
-                                                <input type="text" class="form-control" id="neighborhood" placeholder="Mahalle adı" required>
-                                            </div>
-                                        </div>
-
-                                        <div class="col-12">
-                                            <label for="address" class="form-label">Açık Adres <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-house input-icon textarea-icon"></i>
-                                                <textarea class="form-control" id="address" rows="3" placeholder="Cadde, sokak, bina ve kapı numarası..." required></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 3. Okul ve Veli Bilgileri (18 Yaş Altı Koşullu) -->
-                            <div class="col-12" id="minorFields">
-                                <div class="form-section-card minor-section">
-                                    <div class="section-title">
-                                        <div class="section-number bg-warning text-dark">3</div>
-                                        <div>
-                                            <h5 class="mb-0">Okul ve Veli Bilgileri</h5>
-                                            <small class="text-muted fw-normal">18 yaş altı öğrenciler için doldurulması zorunludur.</small>
-                                        </div>
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label for="school" class="form-label">Okul Adı <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-school input-icon"></i>
-                                                <input type="text" class="form-control" id="school" placeholder="Devam ettiği okul">
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="className" class="form-label">Sınıf <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-chalkboard-user input-icon"></i>
-                                                <input type="text" class="form-control" id="className" placeholder="Örn: 7">
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="parentName" class="form-label">Veli Adı Soyadı <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-user-shield input-icon"></i>
-                                                <input type="text" class="form-control" id="parentName" placeholder="Veli Ad Soyad">
-                                            </div>
-                                        </div>
-
-                                        <div class="col-md-6">
-                                            <label for="parentPhone" class="form-label">Veli Telefon Numarası <span class="text-danger">*</span></label>
-                                            <div class="input-group-custom">
-                                                <i class="fa-solid fa-mobile-screen-button input-icon"></i>
-                                                <input type="tel" class="form-control" id="parentPhone" maxlength="11" placeholder="05XXXXXXXXX">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- İşlem Butonları -->
-                            <div class="col-12 mt-4 text-end d-flex justify-content-end align-items-center gap-3">
-                                <button type="button" class="btn btn-light-custom" id="clearDraftBtn">
-                                    <i class="fa-solid fa-rotate-left me-1"></i> Formu Temizle
-                                </button>
-                                <button type="button" class="btn btn-submit-custom shadow-sm" id="submitBtn">
-                                    <span>Kayıt Ol</span> <i class="fa-solid fa-arrow-right ms-2"></i>
-                                </button>
-                            </div>
-
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Başarılı Kayıt Sonrası Sonuç Kartı -->
-                <div class="card main-form-card shadow-lg p-4 p-md-5 text-center d-none" id="success-card">
-                    <div class="success-icon-wrapper mb-3">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                    <h3 class="fw-bold text-dark mb-2">Kaydınız Alınmıştır!</h3>
-                    <p class="text-muted mb-4">Aşağıdaki giriş kartınızı indirebilir veya çıktısını alabilirsiniz.</p>
-
-                    <div id="printableArea" class="success-ticket-card p-4 my-3 text-start">
-                        <div class="row align-items-center g-4">
-                            <div class="col-md-8 border-end-md">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="badge bg-primary-soft text-primary fw-bold fs-6" id="res-regNumber">Kayıt No: -</span>
-                                    <span class="seat-badge" id="res-seat">Koltuk: Atanmadı</span>
-                                </div>
-                                <h4 class="fw-bold text-dark mb-3" id="res-fullName">-</h4>
-                                <ul class="list-unstyled ticket-info-list mb-0">
-                                    <li><i class="fa-solid fa-id-card me-2"></i><strong>TC Kimlik:</strong> <span id="res-tc">-</span></li>
-                                    <li><i class="fa-solid fa-phone me-2"></i><strong>Telefon:</strong> <span id="res-phone">-</span></li>
-                                    <li><i class="fa-solid fa-cake-candles me-2"></i><strong>Doğum / Yaş:</strong> <span id="res-birth">-</span></li>
-                                    <li><i class="fa-solid fa-location-dot me-2"></i><strong>Adres:</strong> <span id="res-address">-</span></li>
-                                </ul>
-                                <div id="res-minorInfo" class="mt-2 pt-2 border-top">
-                                    <ul class="list-unstyled ticket-info-list mb-0">
-                                        <li><i class="fa-solid fa-school me-2"></i><strong>Okul/Sınıf:</strong> <span id="res-school">-</span></li>
-                                        <li><i class="fa-solid fa-user-shield me-2"></i><strong>Veli:</strong> <span id="res-parent">-</span></li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-center">
-                                <div class="qr-wrapper p-3 bg-white rounded shadow-sm d-inline-block">
-                                    <div id="successQrCode"></div>
-                                </div>
-                                <small class="text-muted d-block mt-2 fw-semibold">Sistem Doğrulama QR</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex flex-wrap justify-content-center gap-3 mt-4">
-                        <button class="btn btn-primary-custom" id="downloadPdfBtn">
-                            <i class="fa-solid fa-file-pdf me-2"></i>PDF İndir
-                        </button>
-                        <button class="btn btn-outline-secondary px-4 rounded-3" onclick="window.print()">
-                            <i class="fa-solid fa-print me-2"></i>Yazdır
-                        </button>
-                        <button class="btn btn-light-custom" id="newRegistrationBtn">
-                            <i class="fa-solid fa-plus me-2"></i>Yeni Kayıt Yap
-                        </button>
-                    </div>
-                </div>
-
+        <div class="card main-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-dark"><i class="fa-solid fa-eye me-2 text-primary"></i>Kayıt Listesi Canlı Önizleme</h5>
+                <button class="btn btn-sm btn-excel" onclick="downloadFullExcel()">
+                    <i class="fa-solid fa-download me-1"></i> Excel İndir (.xlsx)
+                </button>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered table-custom align-middle" id="previewTable">
+                    <thead>
+                        <tr>
+                            <th class="text-center">Sıra No</th>
+                            <th>Aile / Birleştirilmiş Grup</th>
+                            <th>Kayıt No</th>
+                            <th>Koltuk No</th>
+                            <th>Soyadı</th>
+                            <th>Adı</th>
+                            <th>TC Kimlik No</th>
+                            <th>Telefon</th>
+                            <th>Veli Ad Soyad</th>
+                            <th>Veli Telefon</th>
+                            <th>Doğum Tarihi</th>
+                            <th>Yaş</th>
+                            <th>Cinsiyet</th>
+                            <th>İlçe</th>
+                            <th>Mahalle</th>
+                            <th>Açık Adres</th>
+                            <th>Okul Adı</th>
+                            <th>Sınıf</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Kütüphaneler -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        const allRecords = [
+            { group: "Adsiz Grubu", regNo: "TYO-0013", seat: "Atanmadı", surname: "İLAN", name: "Almina", tc: "28834993602", phone: "05419130002", parentName: "Zana Adsiz", parentPhone: "05377428626", birth: "2013-08-04", age: 12, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "4035 sokak no:19", school: "Fatma Günay Ortaokulu", className: "8. Sınıf" },
+            { group: "Adsiz Grubu", regNo: "TYO-0017", seat: "Atanmadı", surname: "ADSIZ", name: "Zana", tc: "53302432574", phone: "05377428626", parentName: "-", parentPhone: "-", birth: "2000-03-15", age: 26, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "4035 sokak no.19", school: "-", className: "-" },
+            { group: "Akdağ Ailesi", regNo: "TYO-0009", seat: "Atanmadı", surname: "AKDAĞ", name: "Aysun", tc: "16715957348", phone: "05551438392", parentName: "-", parentPhone: "-", birth: "1987-11-24", age: 38, gender: "Kadın", district: "Selçuk", neighborhood: "Atatürk", address: "Atatürk mahallesi 1024 sokak no:8 kat:3 daire:5", school: "-", className: "-" },
+            { group: "Akdağ Ailesi", regNo: "TYO-0004", seat: "Atanmadı", surname: "AKDAĞ", name: "Muhammed", tc: "25547664188", phone: "05404000076", parentName: "-", parentPhone: "-", birth: "1997-07-28", age: 29, gender: "Erkek", district: "Selçuk", neighborhood: "Atatürk", address: "Atatürk mah", school: "-", className: "-" },
+            { group: "Aslan Ailesi", regNo: "TYO-0007", seat: "Atanmadı", surname: "ASLAN", name: "Alya Mavi", tc: "16229973522", phone: "05436687070", parentName: "Aynur Aslan", parentPhone: "05436687070", birth: "2016-11-28", age: 9, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mahallesi 4002 sokak no 13", school: "Gazi Mustafa Kemal İlkokulu", className: "3.Sınıf" },
+            { group: "Aslan Ailesi", regNo: "TYO-0005", seat: "Atanmadı", surname: "ASLAN", name: "Aynur", tc: "18056912530", phone: "05436687070", parentName: "-", parentPhone: "-", birth: "1984-06-25", age: 42, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 mayıs mahallesi 4002 sokak no 13", school: "-", className: "-" },
+            { group: "Aslan Ailesi", regNo: "TYO-0006", seat: "Atanmadı", surname: "ASLAN", name: "Derin", tc: "16226973616", phone: "05436687070", parentName: "Aynur Aslan", parentPhone: "05436687070", birth: "2016-11-28", age: 9, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 mayıs mahallesi 4002 sokak no 13", school: "Gazi Mustafa Kemal İlkokulu", className: "3.Sınıf" },
+            { group: "Aslan Ailesi", regNo: "TYO-0008", seat: "Atanmadı", surname: "ASLAN", name: "Diren Mavi", tc: "18053912628", phone: "05436687070", parentName: "Aynur Aslan", parentPhone: "05436687070", birth: "2014-04-03", age: 12, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 mayıs mahallesi 4002 sokak no 13", school: "Şehit Ömer Halisdemir Borsa İstanbul Ortaokulu", className: "6. Sınıf" },
+            { group: "Baş Ailesi", regNo: "TYO-0026", seat: "Atanmadı", surname: "BAŞ", name: "Aynur", tc: "18398901170", phone: "05335198421", parentName: "-", parentPhone: "-", birth: "1983-05-18", age: 43, gender: "Kadın", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "Zafer mah. 3020 sk. No: 14", school: "-", className: "-" },
+            { group: "Baş Ailesi", regNo: "TYO-0025", seat: "Atanmadı", surname: "BAŞ", name: "Eymen", tc: "18395901264", phone: "05335198421", parentName: "Aynur Baş", parentPhone: "05335198421", birth: "2014-08-01", age: 11, gender: "Erkek", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "Zafer mah. 3020 sk. No: 14", school: "Borsa İstanbul Şehit Ömer Halisdemir Ortaokulu", className: "5" },
+            { group: "Baş Ailesi", regNo: "TYO-0030", seat: "Atanmadı", surname: "BAŞ", name: "Yaman", tc: "18392901358", phone: "05335198421", parentName: "Aynur Baş", parentPhone: "05335198421", birth: "2017-06-25", age: 9, gender: "Erkek", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "Zafer mah 3020 sk No: 14", school: "İsabey ilkokulu", className: "3" },
+            { group: "Er Ailesi", regNo: "TYO-0010", seat: "Atanmadı", surname: "ER", name: "Büşra", tc: "39757303038", phone: "05439739505", parentName: "-", parentPhone: "-", birth: "1995-10-06", age: 30, gender: "Kadın", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "Zafer Mahallesi 3045 Sokak No 26 Daire 1 Selçuk İZMİR", school: "-", className: "-" },
+            { group: "Gürer Grubu", regNo: "TYO-0018", seat: "Atanmadı", surname: "GÜRER", name: "Hilal", tc: "21803787680", phone: "05078174542", parentName: "-", parentPhone: "-", birth: "1991-03-24", age: 35, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mah 4022 sk no:18/2 Selçuk İzmir", school: "-", className: "-" },
+            { group: "Gürer Grubu", regNo: "TYO-0019", seat: "Atanmadı", surname: "GÜRER", name: "Toprak", tc: "21791788094", phone: "05078174542", parentName: "Hilal Gürer", parentPhone: "05078174542", birth: "2014-01-16", age: 12, gender: "Erkek", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mah 4022 sk no:18/2 Selçuk İzmir", school: "Borsa İstanbul Şehit Ömer Halis Demir Ortaokulu", className: "6" },
+            { group: "Karakaş Ailesi", regNo: "TYO-0023", seat: "Atanmadı", surname: "KARAKAŞ", name: "Emine", tc: "11579125862", phone: "05052933869", parentName: "-", parentPhone: "-", birth: "1984-03-01", age: 42, gender: "Kadın", district: "Selçuk", neighborhood: "Atatürk", address: "Aydın caddesi ilıca apt no 48 daıre 10", school: "-", className: "-" },
+            { group: "Kutlay Grubu", regNo: "TYO-0015", seat: "Atanmadı", surname: "KUTLAY", name: "Rabia", tc: "55531358054", phone: "05076412033", parentName: "-", parentPhone: "-", birth: "1998-09-08", age: 27, gender: "Kadın", district: "Selçuk", neighborhood: "Atatürk", address: "Atatürk mah. 1051 sk. No: 12", school: "-", className: "-" },
+            { group: "Kutlay Grubu", regNo: "TYO-0014", seat: "Atanmadı", surname: "KUTLAY", name: "Rüzgar Ali", tc: "55528358148", phone: "05076412033", parentName: "Rabia Kutlay", parentPhone: "05076412033", birth: "2019-12-09", age: 6, gender: "Erkek", district: "Selçuk", neighborhood: "Atatürk", address: "Atatürk mah 1051 sokak no 12 kat 1", school: "Anaokulu", className: "Anaokulu" },
+            { group: "Ok Grubu", regNo: "TYO-0001", seat: "Atanmadı", surname: "OK", name: "Poyraz", tc: "12764086392", phone: "05452293527", parentName: "Zeliha Ok", parentPhone: "05452293527", birth: "2014-08-20", age: 11, gender: "Erkek", district: "Selçuk", neighborhood: "Cumhuriyet Mahallesi", address: "Cumhuriyet mahallesi 5013 sokak no 2", school: "Fatma Günay Ortaokulu", className: "6. Sınıf" },
+            { group: "Ok Grubu", regNo: "TYO-0002", seat: "Atanmadı", surname: "OK", name: "Zeliha", tc: "12767086208", phone: "05452293527", parentName: "-", parentPhone: "-", birth: "1988-10-09", age: 37, gender: "Kadın", district: "Selçuk", neighborhood: "Cumhuriyet Mahallesi", address: "Cumhuriyet mahallesi 5013 sokak no 2", school: "-", className: "-" },
+            { group: "Özdağ Ailesi", regNo: "TYO-0028", seat: "Atanmadı", surname: "ÖZDAĞ", name: "Aymira", tc: "16001981084", phone: "05459359300", parentName: "Saliha Özdağ", parentPhone: "05459359300", birth: "2018-09-27", age: 7, gender: "Kadın", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "Zafer Mahallesi 3004 sokak no: 14 kat: 1", school: "Sekiz Eylül İlkokulu", className: "1. Sınıf" },
+            { group: "Özdağ Ailesi", regNo: "TYO-0027", seat: "Atanmadı", surname: "ÖZDAĞ", name: "Saliha", tc: "16004980902", phone: "05459359300", parentName: "-", parentPhone: "-", birth: "1992-06-15", age: 34, gender: "Kadın", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "Zafer Mahallesi 3004 sokak no: 14 kat 1", school: "-", className: "-" },
+            { group: "Özdağ Ailesi", regNo: "TYO-0029", seat: "Atanmadı", surname: "ÖZDAĞ", name: "Sare", tc: "16007980816", phone: "05459359300", parentName: "Saliha Özdağ", parentPhone: "05459359300", birth: "2014-07-28", age: 12, gender: "Kadın", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "Zafer Mahallesi 3004 sokak no: 14 kat: 1", school: "Şehit Ömer Halisdemir Borsa İstanbul Ortaokulu", className: "6. Sınıf" },
+            { group: "Sorucu Ailesi", regNo: "TYO-0024", seat: "Atanmadı", surname: "SORUCU", name: "Aysel", tc: "24682288002", phone: "05059328192", parentName: "-", parentPhone: "-", birth: "1956-02-12", age: 70, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mahallesi kobuletti CAD. No:33", school: "-", className: "-" },
+            { group: "Sorucu Ailesi", regNo: "TYO-0020", seat: "Atanmadı", surname: "SORUCU", name: "Kumsal", tc: "24667288590", phone: "05059328192", parentName: "Tuğba Sorucu", parentPhone: "05059328192", birth: "2016-06-03", age: 10, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mahallesi kobuletti CAD. No:33", school: "Sekiz Eylül İlkokulu", className: "4" },
+            { group: "Sorucu Ailesi", regNo: "TYO-0021", seat: "Atanmadı", surname: "SORUCU", name: "Laren", tc: "24670288404", phone: "05059328192", parentName: "Tuğba Sorucu", parentPhone: "05059328192", birth: "2018-02-09", age: 8, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mahallesi kobuletti CAD. No:33", school: "Sekiz Eylül İlkokulu", className: "2" },
+            { group: "Sorucu Ailesi", regNo: "TYO-0012", seat: "Atanmadı", surname: "SORUCU", name: "Toprak", tc: "24664288684", phone: "05059328192", parentName: "Tuğba Sorucu", parentPhone: "05059328192", birth: "2018-02-09", age: 8, gender: "Erkek", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mahallesi kobuletti CAD. No:33", school: "Sekiz Eylül İlkokulu", className: "2" },
+            { group: "Sorucu Ailesi", regNo: "TYO-0022", seat: "Atanmadı", surname: "SORUCU", name: "Tuğba", tc: "16579554158", phone: "05059328192", parentName: "-", parentPhone: "-", birth: "1983-12-17", age: 42, gender: "Kadın", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mahallesi kobuletti CAD no 33", school: "-", className: "-" },
+            { group: "Sorucu Ailesi", regNo: "TYO-0031", seat: "Atanmadı", surname: "SORUCU", name: "Uras Ali", tc: "24661288782", phone: "05423435699", parentName: "Hüseyin Sorucu", parentPhone: "05436415099", birth: "2021-12-16", age: 4, gender: "Erkek", district: "Selçuk", neighborhood: "14 Mayıs Mahallesi", address: "14 Mayıs mahallesi kobuletti CAD no 33", school: "Kreş", className: "5 yaş" },
+            { group: "Yuçe Grubu", regNo: "TYO-0011", seat: "Atanmadı", surname: "YUÇE", name: "Elif Naz", tc: "41860559536", phone: "05439728835", parentName: "Suzan Yuçe", parentPhone: "05439728835", birth: "2014-01-01", age: 12, gender: "Kadın", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "zafer mahallesi 3050 sokak no 15 kat 1", school: "Fatma Günay Ortaokulu", className: "8" },
+            { group: "Yuçe Grubu", regNo: "TYO-0016", seat: "Atanmadı", surname: "YUÇE", name: "Miraç", tc: "32681539276", phone: "05439728835", parentName: "Suzan Yuçe", parentPhone: "05439728835", birth: "2018-08-02", age: 7, gender: "Erkek", district: "Selçuk", neighborhood: "Zafer Mahallesi", address: "zafer mahallesi 3050 sokak no 15 kat 1", school: "Sekiz eylül ilkokulu", className: "2" }
+        ];
 
-    <!-- Modüler JS Bağlantısı -->
-    <script type="module" src="js/app.js"></script>
+        function renderPreviewTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = "";
+
+            allRecords.forEach((r, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="text-center fw-bold">${index + 1}</td>
+                    <td class="fw-semibold text-primary">${r.group}</td>
+                    <td class="font-monospace">${r.regNo}</td>
+                    <td>${r.seat}</td>
+                    <td class="fw-bold">${r.surname}</td>
+                    <td>${r.name}</td>
+                    <td class="font-monospace">${r.tc}</td>
+                    <td class="font-monospace">${r.phone}</td>
+                    <td>${r.parentName}</td>
+                    <td class="font-monospace">${r.parentPhone}</td>
+                    <td>${r.birth}</td>
+                    <td class="text-center">${r.age}</td>
+                    <td class="text-center">${r.gender}</td>
+                    <td>${r.district}</td>
+                    <td>${r.neighborhood}</td>
+                    <td class="small text-truncate" style="max-width: 150px;" title="${r.address}">${r.address}</td>
+                    <td>${r.school}</td>
+                    <td>${r.className}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function downloadFullExcel() {
+            const excelRows = allRecords.map((r, index) => ({
+                "Sıra No": index + 1,
+                "Aile / Birleştirilmiş Grup": r.group,
+                "Kayıt No": r.regNo,
+                "Koltuk No": r.seat,
+                "Soyadı": r.surname,
+                "Adı": r.name,
+                "TC Kimlik No": r.tc,
+                "Telefon": r.phone,
+                "Veli Ad Soyad": r.parentName,
+                "Veli Telefon": r.parentPhone,
+                "Doğum Tarihi": r.birth,
+                "Yaş": r.age,
+                "Cinsiyet": r.gender,
+                "İlçe": r.district,
+                "Mahalle": r.neighborhood,
+                "Açık Adres": r.address,
+                "Okul Adı": r.school,
+                "Sınıf": r.className
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(excelRows);
+
+            worksheet['!cols'] = [
+                { wch: 8 },  { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 16 },
+                { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 14 },
+                { wch: 14 }, { wch: 6 },  { wch: 10 }, { wch: 14 }, { wch: 20 },
+                { wch: 35 }, { wch: 28 }, { wch: 12 }
+            ];
+
+            // Excel Sayfa Yapılandırması: Kılavuz Çizgilerini (Gridlines) Görünür Yap
+            if (!worksheet['!views']) worksheet['!views'] = [{}];
+            worksheet['!views'][0].showGridLines = true;
+
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Kayit_Listesi");
+
+            XLSX.writeFile(workbook, "TUGVA_Yaz_Okulu_Aile_Sirali_Cizgili_2026.xlsx");
+        }
+
+        window.onload = function() {
+            renderPreviewTable();
+        };
+    </script>
 </body>
 </html>
 
+```
