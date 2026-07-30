@@ -610,7 +610,7 @@ function confirmDeleteStudent(studentId, fullName) {
     });
 }
 
-// Excel Dışa Aktarma (Şablona Tam Uyumlu: Kızlar -> 1 Boşluk -> Erkekler)
+// Excel Dışa Aktarma (Aile Birleştirmeleri Korunarak: Kızlar -> 1 Boş Satır -> Erkekler)
 function setupExcelExportEvent() {
     const exportBtn = document.getElementById('exportExcelBtn');
     if (!exportBtn) return;
@@ -621,7 +621,7 @@ function setupExcelExportEvent() {
             return;
         }
 
-        // Kadın ve Erkek Gruplarını Ayırma
+        // 1. Ekrandaki Manuel/Aile Gruplu Sıralamayı Koru ve Cinsiyete Göre Ayır
         const females = filteredStudents.filter(s => (s.gender || '').toLowerCase('tr') === 'kadın');
         const males = filteredStudents.filter(s => (s.gender || '').toLowerCase('tr') === 'erkek');
         const others = filteredStudents.filter(s => (s.gender || '').toLowerCase('tr') !== 'kadın' && (s.gender || '').toLowerCase('tr') !== 'erkek');
@@ -629,55 +629,83 @@ function setupExcelExportEvent() {
         let rowNo = 1;
         const excelRows = [];
 
-        // 1. Kız Öğrenciler (Kadın)
+        // Kız Öğrenciler
         females.forEach(s => {
             excelRows.push({
                 "Sıra No": rowNo++,
-                "Ad-Soyad": `${s.name || ''} ${s.surname || ''}`.trim(),
+                "Aile / Birleştirilmiş Grup": s.familyGroup || `${s.surname} Ailesi`,
+                "Kayıt No": s.registerNumber || '',
+                "Koltuk No": s.seatNumber || 'Atanmadı',
+                "Soyadı": (s.surname || '').toUpperCase('tr'),
+                "Adı": s.name || '',
                 "TC Kimlik No": s.tc || '',
+                "Telefon": s.phone || '',
+                "Veli Ad Soyad": s.parentName || '-',
+                "Veli Telefon": s.parentPhone || '-',
                 "Doğum Tarihi": s.birthDate || '',
-                "Telefon Numarası": s.phone || '',
-                "İlçesi": s.district || ''
+                "Yaş": s.age || '',
+                "Cinsiyet": s.gender || '',
+                "İlçe": s.district || '',
+                "Mahalle": s.neighborhood || '',
+                "Açık Adres": s.address || '',
+                "Okul Adı": s.school || '-',
+                "Sınıf": s.className || '-'
             });
         });
 
-        // Kızlar ile Erkekler arasında 1 Boş Satır Kuralı
+        // 1 Tam Boş Satır Ayrımı
         if (females.length > 0 && (males.length > 0 || others.length > 0)) {
             excelRows.push({
-                "Sıra No": "",
-                "Ad-Soyad": "",
-                "TC Kimlik No": "",
-                "Doğum Tarihi": "",
-                "Telefon Numarası": "",
-                "İlçesi": ""
+                "Sıra No": "", "Aile / Birleştirilmiş Grup": "", "Kayıt No": "", "Koltuk No": "", "Soyadı": "", "Adı": "", "TC Kimlik No": "", "Telefon": "", "Veli Ad Soyad": "", "Veli Telefon": "", "Doğum Tarihi": "", "Yaş": "", "Cinsiyet": "", "İlçe": "", "Mahalle": "", "Açık Adres": "", "Okul Adı": "", "Sınıf": ""
             });
         }
 
-        // 2. Erkek Öğrenciler
-        males.forEach(s => {
+        // Erkek Öğrenciler
+        males.concat(others).forEach(s => {
             excelRows.push({
                 "Sıra No": rowNo++,
-                "Ad-Soyad": `${s.name || ''} ${s.surname || ''}`.trim(),
+                "Aile / Birleştirilmiş Grup": s.familyGroup || `${s.surname} Ailesi`,
+                "Kayıt No": s.registerNumber || '',
+                "Koltuk No": s.seatNumber || 'Atanmadı',
+                "Soyadı": (s.surname || '').toUpperCase('tr'),
+                "Adı": s.name || '',
                 "TC Kimlik No": s.tc || '',
+                "Telefon": s.phone || '',
+                "Veli Ad Soyad": s.parentName || '-',
+                "Veli Telefon": s.parentPhone || '-',
                 "Doğum Tarihi": s.birthDate || '',
-                "Telefon Numarası": s.phone || '',
-                "İlçesi": s.district || ''
-            });
-        });
-
-        // Diğer (Varsa)
-        others.forEach(s => {
-            excelRows.push({
-                "Sıra No": rowNo++,
-                "Ad-Soyad": `${s.name || ''} ${s.surname || ''}`.trim(),
-                "TC Kimlik No": s.tc || '',
-                "Doğum Tarihi": s.birthDate || '',
-                "Telefon Numarası": s.phone || '',
-                "İlçesi": s.district || ''
+                "Yaş": s.age || '',
+                "Cinsiyet": s.gender || '',
+                "İlçe": s.district || '',
+                "Mahalle": s.neighborhood || '',
+                "Açık Adres": s.address || '',
+                "Okul Adı": s.school || '-',
+                "Sınıf": s.className || '-'
             });
         });
 
         const worksheet = XLSX.utils.json_to_sheet(excelRows);
+
+        worksheet['!cols'] = [
+            { wch: 8 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 14 }, { wch: 14 }, { wch: 6 }, { wch: 10 }, { wch: 14 }, { wch: 20 }, { wch: 35 }, { wch: 28 }, { wch: 12 }
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Kayit_Listesi");
+
+        const today = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(workbook, `TUGVA_Yaz_Okulu_Kayıtlar_${today}.xlsx`);
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Excel İndirildi',
+            text: `${filteredStudents.length} kayıt aile grupları ve cinsiyet ayrımıyla indirildi.`,
+            timer: 2000,
+            showConfirmButton: false
+        });
+    });
+}
+
 
         // Şablondaki Sütun Genişlikleri
         worksheet['!cols'] = [
