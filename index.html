@@ -1,17 +1,31 @@
-import { db, REGISTRATIONS_COL } from "./firebase.js";
-import { addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+<!-- Form alanını gizleyip "Başvuru Sonlanmıştır" mesajı gösteren güncel kod -->
+<div id="registrationFormContainer" class="container py-5 text-center">
+    <div class="card border-0 shadow-sm p-5 rounded-4 bg-white mx-auto" style="max-width: 600px;">
+        <div class="mb-3 text-warning">
+            <i class="fa-solid fa-circle-exclamation fa-3x"></i>
+        </div>
+        <h3 class="fw-bold text-dark mb-2">Başvurular Sona Ermiştir</h3>
+        <p class="text-muted mb-4">TÜGVA Yaz Okulu kayıt dönemi tamamlanmıştır. Yoğun ilginiz için teşekkür ederiz.</p>
+        <div class="alert alert-secondary py-2 small mb-0">
+            Kayıt işlemleri kapatılmıştır. Bilgi için yöneticilikle iletişime geçebilirsiniz.
+        </div>
+    </div>
+</div>
 
-// Kayıtları tamamen kapatmak için fonksiyonu güncelliyoruz
-export async function submitRegistrationForm(studentData) {
-    // Kayıtlar kapatıldığı için kullanıcıya doğrudan uyarı gösterilir
-    Swal.fire({
-        icon: 'info',
-        title: 'Başvurular Sona Ermiştir',
-        text: 'TÜGVA Yaz Okulu kayıt dönemi tamamlanmıştır. İlginiz için teşekkür ederiz.',
-        confirmButtonText: 'Tamam'
+<script>
+    // Form veritabanına veri göndermeye çalışırsa engellemek için:
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Başvurular Sona Ermiştir',
+                    text: 'Kayıt süresi dolduğu için yeni başvuru alınmamaktadır.'
+                });
+            });
+        }
     });
-    
-    // Kayıt işleminin veritabanına gitmesini engeller
-    throw new Error("Başvurular sona ermiştir.");
-}
+</script>
 
