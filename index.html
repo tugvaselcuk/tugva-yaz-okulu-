@@ -1,1 +1,17 @@
-.
+import { db, REGISTRATIONS_COL } from "./firebase.js";
+import { addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// Kayıtları tamamen kapatmak için fonksiyonu güncelliyoruz
+export async function submitRegistrationForm(studentData) {
+    // Kayıtlar kapatıldığı için kullanıcıya doğrudan uyarı gösterilir
+    Swal.fire({
+        icon: 'info',
+        title: 'Başvurular Sona Ermiştir',
+        text: 'TÜGVA Yaz Okulu kayıt dönemi tamamlanmıştır. İlginiz için teşekkür ederiz.',
+        confirmButtonText: 'Tamam'
+    });
+    
+    // Kayıt işleminin veritabanına gitmesini engeller
+    throw new Error("Başvurular sona ermiştir.");
+}
+
