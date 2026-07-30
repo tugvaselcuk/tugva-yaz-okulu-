@@ -7,4 +7,4 @@ export const firebaseConfig = {
   appId: "1:930118014370:web:a7350c1e44bb471a05cefb"
 };
 
-export const MAX_QUOTA = 50;
+export const MAX_QUOTA = 100;
