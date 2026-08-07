@@ -79,7 +79,7 @@
 
     <div class="container-fluid px-4 py-4">
         
-        <!-- YÖNETİCİ GİRİŞ KARTI (Oturum Açılmamışsa Görünür) -->
+        <!-- YÖNETİCİ GİRİŞ KARTI -->
         <div class="row justify-content-center py-5" id="admin-login-card">
             <div class="col-md-5 col-lg-4">
                 <div class="card border-0 shadow-lg rounded-4 p-4 bg-white text-center">
@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <!-- YÖNETİCİ DASHBOARD VE İÇERİK (Giriş Yapılınca Açılır) -->
+        <!-- YÖNETİCİ DASHBOARD VE İÇERİK -->
         <div id="admin-dashboard" class="d-none">
             
             <!-- Özet İstatistik Kartları -->
@@ -162,6 +162,27 @@
                 
                 <div class="collapse p-3 bg-light border-bottom" id="lostItemCollapse">
                     <form id="lostItemForm" class="row g-3">
+                        <!-- Yönetici Bilgileri Alanı -->
+                        <div class="col-12">
+                            <div class="alert alert-warning py-2 mb-0 small">
+                                <i class="fa-solid fa-user-shield me-1"></i> <strong>Bildiriyi Oluşturan Yönetici Bilgileri:</strong> Lütfen formun resmi tutanağa işlenebilmesi için aşağıdaki kişisel bilgilerinizi eksiksiz doldurunuz.
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Yönetici Adı <span class="text-danger">*</span></label>
+                            <input type="text" id="adminNameInput" class="form-control" placeholder="Adınız" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Yönetici Soyadı <span class="text-danger">*</span></label>
+                            <input type="text" id="adminSurnameInput" class="form-control" placeholder="Soyadınız" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Yönetici Doğum Tarihi <span class="text-danger">*</span></label>
+                            <input type="date" id="adminBirthDateInput" class="form-control" required>
+                        </div>
+
+                        <hr class="my-2">
+
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">İlgili Kayıtlı Kişi (Öğrenci)</label>
                             <select id="lostStudentSelect" class="form-select">
@@ -218,7 +239,7 @@
                                     <th scope="col">Açıklama</th>
                                     <th scope="col">Durum</th>
                                     <th scope="col">Bildiren Yönetici & Zaman</th>
-                                    <th scope="col" class="text-center" style="width: 90px;">İşlem</th>
+                                    <th scope="col" class="text-center" style="width: 120px;">İşlem</th>
                                 </tr>
                             </thead>
                             <tbody id="lostItemsTableBody">
@@ -235,16 +256,12 @@
             <div class="card border-0 shadow-sm rounded-3 mb-4">
                 <div class="card-body p-3">
                     <div class="row g-3 align-items-center">
-                        
-                        <!-- Arama Çubuğu -->
                         <div class="col-lg-3 col-md-6">
                             <div class="input-group">
                                 <span class="input-group-text bg-white border-end-0 text-muted"><i class="fa-solid fa-magnifying-glass"></i></span>
                                 <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Ad, soyad, TC, veli adı, tel veya koltuk ara...">
                             </div>
                         </div>
-
-                        <!-- Sıralama Seçeneği -->
                         <div class="col-lg-3 col-md-6">
                             <select id="sortSelect" class="form-select fw-semibold">
                                 <option value="family" selected>Sıralama: Aile / Birleştirilmiş Gruplara Göre [Önerilen]</option>
@@ -255,8 +272,6 @@
                                 <option value="name">Sıralama: Ada Göre (A-Z)</option>
                             </select>
                         </div>
-
-                        <!-- Koltuk Durumu Filtresi -->
                         <div class="col-lg-2 col-md-6">
                             <select id="seatFilterSelect" class="form-select">
                                 <option value="all">Tüm Koltuk Durumları</option>
@@ -264,8 +279,6 @@
                                 <option value="unseated">Sadece Koltuğu Atanmamışlar</option>
                             </select>
                         </div>
-
-                        <!-- Hızlı İşlem Butonları -->
                         <div class="col-lg-4 col-md-6 text-end d-flex gap-2 justify-content-end">
                             <button class="btn btn-outline-dark btn-sm px-3 fw-semibold d-inline-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#qrScanModal">
                                 <i class="fa-solid fa-camera"></i> QR Kod Okut
@@ -274,7 +287,6 @@
                                 <i class="fa-solid fa-file-excel"></i> Excel İndir (.xlsx)
                             </button>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -322,7 +334,6 @@
     </div>
 
     <!-- MODALLAR -->
-
     <!-- Düzenleme Modalı -->
     <div class="modal fade" id="editModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
