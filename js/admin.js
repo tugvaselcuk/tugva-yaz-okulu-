@@ -1,14 +1,18 @@
 import { auth, db, REGISTRATIONS_COL } from "./firebase.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { onSnapshot, doc, getDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { onSnapshot, doc, getDoc, updateDoc, deleteDoc, collection, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { generateQR } from "./qr.js";
 import { MAX_QUOTA } from "./config.js";
 
 let allStudents = [];
 let filteredStudents = [];
+let lostItems = [];
 let html5QrcodeScanner = null;
 let currentSelectedStudentForQr = null;
 let unsubscribeListener = null;
+let unsubscribeLostItemsListener = null;
+
+const LOST_ITEMS_COL = collection(db, "lost_items");
 
 document.addEventListener('DOMContentLoaded', () => {
     // Firebase Oturum Dinleyicisi
@@ -22,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dashboard) dashboard.classList.remove('d-none');
             if (logoutBtn) logoutBtn.classList.remove('d-none');
             setupRealtimeListener();
+            setupLostItemsListener();
         } else {
             if (loginCard) loginCard.classList.remove('d-none');
             if (dashboard) dashboard.classList.add('d-none');
@@ -29,6 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (unsubscribeListener) {
                 unsubscribeListener();
                 unsubscribeListener = null;
+            }
+            if (unsubscribeLostItemsListener) {
+                unsubscribeLostItemsListener();
+                unsubscribeLostItemsListener = null;
             }
         }
     });
@@ -39,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEditFormEvent();
     setupQrModalActions();
     setupScannerEvents();
+    setupLostItemFormEvent();
 });
 
 // Admin Giriş / Çıkış Olayları
@@ -80,7 +90,7 @@ function setupAuthEvents() {
     }
 }
 
-// Canlı Firestore Veri Dinleyicisi
+// Canlı Firestore Veri Dinleyicisi (Öğrenciler)
 function setupRealtimeListener() {
     if (unsubscribeListener) unsubscribeListener();
 
@@ -91,6 +101,7 @@ function setupRealtimeListener() {
         }));
 
         processAndRenderData();
+        populateStudentSelectForLostItem();
     }, (error) => {
         console.error("Firestore okuma hatası:", error);
         const tbody = document.getElementById('studentTableBody');
@@ -100,7 +111,199 @@ function setupRealtimeListener() {
     });
 }
 
-// Arama, Sıralama ve Filtre Dinleyicileri (Anında Canlı Süzme)
+// Kayıp Eşya Verilerini Dinleme
+function setupLostItemsListener() {
+    if (unsubscribeLostItemsListener) unsubscribeLostItemsListener();
+
+    const q = query(LOST_ITEMS_COL, orderBy("createdAt", "desc"));
+    unsubscribeLostItemsListener = onSnapshot(q, (snapshot) => {
+        lostItems = snapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+        }));
+        renderLostItemsTable();
+    }, (error) => {
+        console.error("Kayıp eşya okuma hatası:", error);
+    });
+}
+
+// Kayıp Eşya Formunda Öğrenci Seçim Listesini Doldurma
+function populateStudentSelectForLostItem() {
+    const selectEl = document.getElementById('lostStudentSelect');
+    if (!selectEl) return;
+
+    let optionsHtml = '<option value="">-- Öğrenci Seçiniz (Opsiyonel / Genel) --</option>';
+    allStudents.forEach(s => {
+        optionsHtml += `<option value="${s.id}">${s.registerNumber || 'TYO'} - ${s.name} ${s.surname} (${s.phone || 'Tel yok'})</option>`;
+    });
+    selectEl.innerHTML = optionsHtml;
+}
+
+// Kayıp Eşya Bildirimi Kaydetme Olayı
+function setupLostItemFormEvent() {
+    const form = document.getElementById('lostItemForm');
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+            Swal.fire('Hata', 'Oturum açmış yönetici bulunamadı.', 'error');
+            return;
+        }
+
+        const studentId = document.getElementById('lostStudentSelect').value;
+        const itemName = document.getElementById('lostItemName').value.trim();
+        const itemCategory = document.getElementById('lostItemCategory').value;
+        const itemLocation = document.getElementById('lostItemLocation').value.trim();
+        const itemDescription = document.getElementById('lostItemDescription').value.trim();
+        const itemStatus = document.getElementById('lostItemStatus').value;
+
+        let selectedStudentData = null;
+        if (studentId) {
+            const found = allStudents.find(s => s.id === studentId);
+            if (found) {
+                selectedStudentData = {
+                    id: found.id,
+                    registerNumber: found.registerNumber || '',
+                    fullName: `${found.name} ${found.surname}`,
+                    phone: found.phone || '',
+                    seatNumber: found.seatNumber || 'Atanmadı'
+                };
+            }
+        }
+
+        const payload = {
+            student: selectedStudentData,
+            itemName,
+            category: itemCategory,
+            location: itemLocation,
+            description: itemDescription,
+            status: itemStatus,
+            adminEmail: currentUser.email || 'Bilinmiyor',
+            adminUid: currentUser.uid,
+            createdAt: serverTimestamp()
+        };
+
+        Swal.fire({ title: 'Kaydediliyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+        try {
+            await addDoc(LOST_ITEMS_COL, payload);
+            Swal.close();
+            form.reset();
+            Swal.fire({
+                icon: 'success',
+                title: 'Bildiri Oluşturuldu',
+                text: 'Kayıp eşya bildirimi başarıyla kaydedildi ve yönetici bilgileri işlendi.',
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } catch (err) {
+            console.error("Kayıp eşya ekleme hatası:", err);
+            Swal.close();
+            Swal.fire('Hata', 'Kayıt eklenirken bir hata oluştu.', 'error');
+        }
+    });
+}
+
+// Kayıp Eşyaları Tabloda Listeleme
+function renderLostItemsTable() {
+    const tbody = document.getElementById('lostItemsTableBody');
+    const badgeEl = document.getElementById('lostItemsCountBadge');
+    if (!tbody) return;
+
+    if (badgeEl) badgeEl.innerText = `${lostItems.length} Bildiri`;
+
+    if (lostItems.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="8" class="text-center py-4 text-muted">
+                    <i class="fa-solid fa-box-open fa-2xl mb-2 d-block opacity-50"></i>
+                    Henüz kayıtlı kayıp eşya bildirimi bulunmuyor.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let html = '';
+    lostItems.forEach((item, index) => {
+        let dateStr = 'Tarih yok';
+        if (item.createdAt && item.createdAt.toDate) {
+            dateStr = item.createdAt.toDate().toLocaleString('tr-TR');
+        }
+
+        let studentInfo = '<span class="text-muted small">Genel / Sahipsiz Eşya</span>';
+        if (item.student) {
+            studentInfo = `
+                <div class="fw-bold text-dark">${item.student.fullName}</div>
+                <div class="small text-muted font-monospace">${item.student.registerNumber} | Koltuk: ${item.student.seatNumber}</div>
+            `;
+        }
+
+        let statusBadge = '<span class="badge bg-warning text-dark">Aranıyor</span>';
+        if (item.status === 'bulundu') {
+            statusBadge = '<span class="badge bg-success">Bulundu / Teslim Edildi</span>';
+        } else if (item.status === 'arsiv') {
+            statusBadge = '<span class="badge bg-secondary">Arşivlendi</span>';
+        }
+
+        html += `
+            <tr>
+                <td class="text-center fw-bold text-muted small">${index + 1}</td>
+                <td>${studentInfo}</td>
+                <td>
+                    <div class="fw-bold text-dark">${item.itemName}</div>
+                    <div class="small text-muted">${item.category}</div>
+                </td>
+                <td class="small">${item.location || '-'}</td>
+                <td class="small text-truncate" style="max-width: 150px;" title="${item.description || ''}">${item.description || '-'}</td>
+                <td>${statusBadge}</td>
+                <td class="small">
+                    <div class="fw-semibold text-primary"><i class="fa-solid fa-user-shield me-1"></i>${item.adminEmail}</div>
+                    <div class="text-muted" style="font-size: 0.75rem;">${dateStr}</div>
+                </td>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-danger delete-lost-btn" data-id="${item.id}" title="Bildirimi Sil">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = html;
+
+    tbody.querySelectorAll('.delete-lost-btn').forEach(btn => {
+        btn.addEventListener('click', () => confirmDeleteLostItem(btn.dataset.id));
+    });
+}
+
+async function confirmDeleteLostItem(itemId) {
+    Swal.fire({
+        title: 'Bildirimi Sil?',
+        text: 'Bu kayıp eşya bildirimi kalıcı olarak silinecektir!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Evet, Sil!',
+        cancelButtonText: 'Vazgeç'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                await deleteDoc(doc(db, "lost_items", itemId));
+                Swal.fire('Silindi!', 'Bildiri kaldırıldı.', 'success');
+            } catch (err) {
+                Swal.fire('Hata!', 'Silme işlemi başarısız oldu.', 'error');
+            }
+        }
+    });
+}
+
+// Arama, Sıralama ve Filtre Dinleyicileri
 function setupSearchAndFilterEvents() {
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
@@ -115,7 +318,6 @@ function setupSearchAndFilterEvents() {
     if (seatFilterSelect) seatFilterSelect.addEventListener('change', processAndRenderData);
 }
 
-// Öğrencinin Ait Olduğu Aile / Grup Anahtarını Döndüren Yardımcı
 function getEffectiveGroupKey(student) {
     if (student.familyGroup && student.familyGroup.trim() !== '') {
         return student.familyGroup.trim().toUpperCase('tr');
@@ -123,11 +325,9 @@ function getEffectiveGroupKey(student) {
     return (student.surname || '').trim().toUpperCase('tr');
 }
 
-// Verileri İşleme, Birleştirme ve Sıralama
 function processAndRenderData() {
     let result = [...allStudents];
 
-    // 1. Canlı Arama Filtresi (Ad, Soyad, TC, Tel, Kayıt No, Koltuk No, Veli Adı, Veli Tel, Aile Grubu)
     const searchInput = document.getElementById('searchInput');
     const searchTerm = (searchInput?.value || '').trim().toLowerCase('tr');
 
@@ -145,7 +345,6 @@ function processAndRenderData() {
         );
     }
 
-    // 2. Koltuk Filtresi
     const seatFilterVal = document.getElementById('seatFilterSelect')?.value || 'all';
     if (seatFilterVal === 'seated') {
         result = result.filter(s => s.seatNumber && s.seatNumber.trim() !== '');
@@ -153,7 +352,6 @@ function processAndRenderData() {
         result = result.filter(s => !s.seatNumber || s.seatNumber.trim() === '');
     }
 
-    // 3. Grup Sayılarını Hesaplama
     const groupCounts = {};
     allStudents.forEach(s => {
         const key = getEffectiveGroupKey(s);
@@ -162,7 +360,6 @@ function processAndRenderData() {
         }
     });
 
-    // 4. Sıralama Mantığı
     const sortVal = document.getElementById('sortSelect')?.value || 'family';
     
     result.sort((a, b) => {
@@ -188,10 +385,7 @@ function processAndRenderData() {
 
     filteredStudents = result;
 
-    // Metrik Kartları Güncelle
     updateStats(groupCounts);
-
-    // Tabloyu Yazdır
     renderTable(filteredStudents, groupCounts);
 }
 
@@ -258,12 +452,10 @@ function renderTable(students, groupCounts) {
             ? `<span class="badge bg-info-subtle text-dark border border-info fw-semibold"><i class="fa-solid fa-link me-1"></i>${student.familyGroup}</span>`
             : `<span class="text-muted small">${student.surname || ''} Ailesi</span>`;
 
-        // Veli Bilgisi (Her zaman doğrudan tabloda açık ve görünür)
         const parentInfoHtml = (student.parentName || student.parentPhone) 
             ? `<div class="fw-bold text-dark"><i class="fa-solid fa-user-shield me-1 text-success"></i>${student.parentName || '-'}</div><div class="small"><a href="tel:${student.parentPhone}" class="text-decoration-none text-muted">${student.parentPhone || '-'}</a></div>`
             : `<span class="text-muted small">-</span>`;
 
-        // Okul / Sınıf
         const schoolInfoHtml = (student.school || student.className)
             ? `<div>${student.school || '-'}</div><span class="badge bg-light text-dark border">Sınıf: ${student.className || '-'}</span>`
             : `<span class="text-muted small">-</span>`;
@@ -297,7 +489,6 @@ function renderTable(students, groupCounts) {
                 </td>
                 <td class="text-center">
                     <div class="d-inline-flex align-items-center gap-1">
-                        <!-- Manuel Sıralama Okları -->
                         <div class="reorder-btn-group me-1">
                             <button class="btn btn-outline-secondary move-up-btn" data-index="${index}" title="Yukarı Taşı">▲</button>
                             <button class="btn btn-outline-secondary move-down-btn" data-index="${index}" title="Aşağı Taşı">▼</button>
@@ -321,7 +512,6 @@ function renderTable(students, groupCounts) {
 
     tbody.innerHTML = html;
 
-    // Dinleyicileri Bağla
     tbody.querySelectorAll('.move-up-btn').forEach(btn => {
         btn.addEventListener('click', () => moveStudentOrder(parseInt(btn.dataset.index), -1));
     });
@@ -351,7 +541,6 @@ function renderTable(students, groupCounts) {
     });
 }
 
-// Hızlı Aile / Grup Birleştirme Penceresi
 async function promptJoinGroup(studentId, defaultSurname) {
     const student = allStudents.find(s => s.id === studentId);
     if (!student) return;
@@ -382,7 +571,6 @@ async function promptJoinGroup(studentId, defaultSurname) {
     }
 }
 
-// Manuel Sıra Kaydırma Fonksiyonu
 async function moveStudentOrder(index, direction) {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= filteredStudents.length) return;
@@ -417,7 +605,6 @@ async function moveStudentOrder(index, direction) {
     }
 }
 
-// Düzenleme Modalı Açma
 function openEditModal(studentId) {
     const student = allStudents.find(s => s.id === studentId);
     if (!student) return;
@@ -443,7 +630,6 @@ function openEditModal(studentId) {
     bsModal.show();
 }
 
-// Düzenleme Kaydetme
 function setupEditFormEvent() {
     const saveBtn = document.getElementById('saveEditBtn');
     if (!saveBtn) return;
@@ -490,7 +676,6 @@ function setupEditFormEvent() {
     });
 }
 
-// Manuel QR Modal Açma
 async function openQrModal(studentId) {
     const student = allStudents.find(s => s.id === studentId);
     if (!student) return;
@@ -615,7 +800,6 @@ function confirmDeleteStudent(studentId, fullName) {
     });
 }
 
-// // Excel Dışa Aktarma (Tüm Hücre Kenarlıkları ve Yazdırma Kılavuz Çizgileri Dahil)
 function setupExcelExportEvent() {
     const exportBtn = document.getElementById('exportExcelBtn');
     if (!exportBtn) return;
@@ -649,7 +833,6 @@ function setupExcelExportEvent() {
 
         const worksheet = XLSX.utils.json_to_sheet(excelRows);
 
-        // Sütun Genişlikleri
         worksheet['!cols'] = [
             { wch: 8 },  { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 16 },
             { wch: 18 }, { wch: 16 }, { wch: 14 }, { wch: 20 }, { wch: 14 },
@@ -657,7 +840,6 @@ function setupExcelExportEvent() {
             { wch: 35 }, { wch: 28 }, { wch: 12 }
         ];
 
-        // 1. Yazdırırken Kılavuz Çizgilerini (Grid Lines) Aç
         worksheet['!printHeader'] = [1, 1];
         if (!worksheet['!views']) worksheet['!views'] = [{}];
         worksheet['!views'][0].showGridLines = true;
