@@ -63,7 +63,7 @@
                 </div>
                 <div>
                     <span class="d-block fw-bold fs-5 leading-none">TÜGVA Yönetim Paneli</span>
-                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Kayıt, Koltuk & Aile Yönetimi</small>
+                    <small class="text-muted fs-7 fw-normal">Yaz Okulu Kayıt, Koltuk & Kayıp Eşya Yönetimi</small>
                 </div>
             </a>
             <div class="ms-auto d-flex gap-2 align-items-center">
@@ -145,6 +145,88 @@
                     <div class="card border-0 shadow-sm rounded-3 p-3 bg-white h-100">
                         <small class="text-muted fw-semibold">Kalan Kontenjan</small>
                         <h3 class="fw-bold mb-0 text-danger mt-1" id="stat-remaining">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kayıp Eşya Bildiri Bölümü (YENİ) -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-danger text-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Kayıp Eşya Bildirim Formu ve Yönetimi
+                    </h5>
+                    <button class="btn btn-light btn-sm fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#lostItemCollapse">
+                        <i class="fa-solid fa-plus me-1"></i> Yeni Bildiri Ekle
+                    </button>
+                </div>
+                
+                <div class="collapse p-3 bg-light border-bottom" id="lostItemCollapse">
+                    <form id="lostItemForm" class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">İlgili Kayıtlı Kişi (Öğrenci)</label>
+                            <select id="lostStudentSelect" class="form-select">
+                                <option value="">-- Yükleniyor veya Seçilmedi --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Eşya Adı / Başlığı <span class="text-danger">*</span></label>
+                            <input type="text" id="lostItemName" class="form-control" placeholder="Örn: Mavi Matara, Akıllı Saat vb." required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Kategori</label>
+                            <select id="lostItemCategory" class="form-select">
+                                <option value="Elektronik">Elektronik (Telefon, Saat vb.)</option>
+                                <option value="Giyim">Giyim / Aksesuar</option>
+                                <option value="Kırtasiye">Kırtasiye / Kitap</option>
+                                <option value="Kişisel Eşya">Kişisel Eşya (Matara, Çanta vb.)</option>
+                                <option value="Diğer">Diğer</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Kaybolduğu / Bulunduğu Yer</label>
+                            <input type="text" id="lostItemLocation" class="form-control" placeholder="Örn: 2 Nolu Sınıf, Konferans Salonu">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Eşya Durumu</label>
+                            <select id="lostItemStatus" class="form-select">
+                                <option value="aranıyor">Aranıyor / Kayıp</option>
+                                <option value="bulundu">Bulundu / Teslim Bekliyor</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Açıklama / Detay</label>
+                            <input type="text" id="lostItemDescription" class="form-control" placeholder="Örn: Üzerinde sticker var...">
+                        </div>
+                        <div class="col-12 text-end">
+                            <button type="submit" class="btn btn-danger px-4 fw-semibold">
+                                <i class="fa-solid fa-paper-plane me-1"></i> Kayıp Bildirisi Oluştur
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Kayıp Eşyalar Tablosu -->
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col" style="width: 50px;" class="text-center">Sıra</th>
+                                    <th scope="col">Kayıtlı Kişi</th>
+                                    <th scope="col">Eşya / Kategori</th>
+                                    <th scope="col">Yer</th>
+                                    <th scope="col">Açıklama</th>
+                                    <th scope="col">Durum</th>
+                                    <th scope="col">Bildiren Yönetici & Zaman</th>
+                                    <th scope="col" class="text-center" style="width: 90px;">İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="lostItemsTableBody">
+                                <tr>
+                                    <td colspan="8" class="text-center py-3 text-muted">Bildiriler yükleniyor...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -253,7 +335,6 @@
                     <form id="editForm">
                         <input type="hidden" id="editStudentId">
                         
-                        <!-- Manuel Grup Birleştirme Bilgisi -->
                         <div class="alert alert-info py-2 small d-flex align-items-center gap-2 mb-3">
                             <i class="fa-solid fa-people-roof fa-lg"></i>
                             <span>Soyadı farklı olan kişileri aynı gruba bağlamak için <strong>Aile / Grup Etiketi</strong> alanına aynı ismi yazabilirsiniz (Örn: "Aslan Ailesi").</span>
