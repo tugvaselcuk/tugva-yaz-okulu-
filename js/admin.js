@@ -15,8 +15,7 @@ let unsubscribeLostItemsListener = null;
 const LOST_ITEMS_COL = collection(db, "lost_items");
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Firebase Oturum Dinleyicisi
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         const loginCard = document.getElementById('admin-login-card');
         const dashboard = document.getElementById('admin-dashboard');
         const logoutBtn = document.getElementById('adminLogoutBtn');
@@ -27,6 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (logoutBtn) logoutBtn.classList.remove('d-none');
             setupRealtimeListener();
             setupLostItemsListener();
+            await loadAdminProfile(user);
         } else {
             if (loginCard) loginCard.classList.remove('d-none');
             if (dashboard) dashboard.classList.add('d-none');
@@ -87,6 +87,27 @@ function setupAuthEvents() {
                 console.error("Çıkış hatası:", err);
             }
         });
+    }
+}
+
+// Yönetici Profil Bilgilerini Yükleme / Kontrol Etme
+async function loadAdminProfile(user) {
+    try {
+        const adminDocRef = doc(db, "admins", user.uid);
+        const adminDoc = await getDoc(adminDocRef);
+
+        const nameInput = document.getElementById('adminNameInput');
+        const surnameInput = document.getElementById('adminSurnameInput');
+        const birthDateInput = document.getElementById('adminBirthDateInput');
+
+        if (adminDoc.exists()) {
+            const data = adminDoc.data();
+            if (nameInput) nameInput.value = data.name || '';
+            if (surnameInput) surnameInput.value = data.surname || '';
+            if (birthDateInput) birthDateInput.value = data.birthDate || '';
+        }
+    } catch (err) {
+        console.error("Yönetici profili okunamadı:", err);
     }
 }
 
@@ -152,6 +173,28 @@ function setupLostItemFormEvent() {
             return;
         }
 
+        const adminName = (document.getElementById('adminNameInput')?.value || '').trim();
+        const adminSurname = (document.getElementById('adminSurnameInput')?.value || '').trim();
+        const adminBirthDate = document.getElementById('adminBirthDateInput')?.value || '';
+
+        if (!adminName || !adminSurname || !adminBirthDate) {
+            Swal.fire('Eksik Bilgi', 'Lütfen kendi adınızı, soyadınızı ve doğum tarihinizi doldurunuz.', 'warning');
+            return;
+        }
+
+        // Yönetici profilini kaydet
+        try {
+            const { setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            await setDoc(doc(db, "admins", currentUser.uid), {
+                name: adminName,
+                surname: adminSurname,
+                birthDate: adminBirthDate,
+                email: currentUser.email
+            }, { merge: true });
+        } catch (e) {
+            console.error("Admin profili kaydedilemedi:", e);
+        }
+
         const studentId = document.getElementById('lostStudentSelect').value;
         const itemName = document.getElementById('lostItemName').value.trim();
         const itemCategory = document.getElementById('lostItemCategory').value;
@@ -180,8 +223,13 @@ function setupLostItemFormEvent() {
             location: itemLocation,
             description: itemDescription,
             status: itemStatus,
-            adminEmail: currentUser.email || 'Bilinmiyor',
-            adminUid: currentUser.uid,
+            admin: {
+                uid: currentUser.uid,
+                email: currentUser.email || '',
+                name: adminName,
+                surname: adminSurname,
+                birthDate: adminBirthDate
+            },
             createdAt: serverTimestamp()
         };
 
@@ -190,11 +238,14 @@ function setupLostItemFormEvent() {
         try {
             await addDoc(LOST_ITEMS_COL, payload);
             Swal.close();
-            form.reset();
+            document.getElementById('lostItemName').value = '';
+            document.getElementById('lostItemLocation').value = '';
+            document.getElementById('lostItemDescription').value = '';
+            document.getElementById('lostStudentSelect').value = '';
             Swal.fire({
                 icon: 'success',
                 title: 'Bildiri Oluşturuldu',
-                text: 'Kayıp eşya bildirimi başarıyla kaydedildi ve yönetici bilgileri işlendi.',
+                text: 'Kayıp eşya bildirimi ve yönetici bilgileri başarıyla kaydedildi.',
                 timer: 2000,
                 showConfirmButton: false
             });
@@ -248,6 +299,8 @@ function renderLostItemsTable() {
             statusBadge = '<span class="badge bg-secondary">Arşivlendi</span>';
         }
 
+        const adminNameStr = item.admin ? `${item.admin.name} ${item.admin.surname} (${item.admin.email})` : (item.adminEmail || 'Bilinmiyor');
+
         html += `
             <tr>
                 <td class="text-center fw-bold text-muted small">${index + 1}</td>
@@ -260,11 +313,14 @@ function renderLostItemsTable() {
                 <td class="small text-truncate" style="max-width: 150px;" title="${item.description || ''}">${item.description || '-'}</td>
                 <td>${statusBadge}</td>
                 <td class="small">
-                    <div class="fw-semibold text-primary"><i class="fa-solid fa-user-shield me-1"></i>${item.adminEmail}</div>
+                    <div class="fw-semibold text-primary"><i class="fa-solid fa-user-shield me-1"></i>${adminNameStr}</div>
                     <div class="text-muted" style="font-size: 0.75rem;">${dateStr}</div>
                 </td>
                 <td class="text-center">
                     <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-success pdf-lost-btn" data-id="${item.id}" title="PDF İndir">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </button>
                         <button class="btn btn-outline-danger delete-lost-btn" data-id="${item.id}" title="Bildirimi Sil">
                             <i class="fa-solid fa-trash-can"></i>
                         </button>
@@ -276,9 +332,101 @@ function renderLostItemsTable() {
 
     tbody.innerHTML = html;
 
+    tbody.querySelectorAll('.pdf-lost-btn').forEach(btn => {
+        btn.addEventListener('click', () => generateLostItemPDF(btn.dataset.id));
+    });
+
     tbody.querySelectorAll('.delete-lost-btn').forEach(btn => {
         btn.addEventListener('click', () => confirmDeleteLostItem(btn.dataset.id));
     });
+}
+
+// PDF Oluşturma ve Yazdırma Fonksiyonu
+function generateLostItemPDF(itemId) {
+    const item = lostItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    let dateStr = 'Tarih belirtilmedi';
+    if (item.createdAt && item.createdAt.toDate) {
+        dateStr = item.createdAt.toDate().toLocaleString('tr-TR');
+    }
+
+    const admin = item.admin || {};
+    const student = item.student || {};
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="tr">
+        <head>
+            <meta charset="UTF-8">
+            <title>Kayıp Eşya Bildiri Tutanağı</title>
+            <style>
+                body { font-family: 'Inter', Arial, sans-serif; padding: 30px; color: #333; line-height: 1.6; }
+                .header { text-align: center; border-bottom: 2px solid #004b87; padding-bottom: 15px; margin-bottom: 25px; }
+                .header h2 { color: #004b87; margin: 0; }
+                .header p { margin: 5px 0 0; color: #666; font-size: 14px; }
+                .section-title { font-weight: bold; background: #f0f7ff; padding: 8px 12px; margin-top: 20px; border-left: 4px solid #004b87; font-size: 15px; }
+                table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                td { padding: 8px 12px; border: 1px solid #ddd; font-size: 14px; }
+                td.label { font-weight: bold; background: #fafafa; width: 30%; }
+                .footer { margin-top: 40px; display: flex; justify-content: space-between; font-size: 13px; }
+                .signature-box { text-align: center; margin-top: 50px; }
+                @media print {
+                    body { padding: 0; }
+                    .no-print { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h2>TÜGVA YAZ OKULU</h2>
+                <p>Kayıp Eşya ve Tespit Bildiri Tutanağı</p>
+            </div>
+
+            <div class="section-title">1. Yönetici (Bildiriyi Oluşturan) Bilgileri</div>
+            <table>
+                <tr><td class="label">Ad Soyad:</td><td>${admin.name || '-'} ${admin.surname || '-'}</td></tr>
+                <tr><td class="label">Doğum Tarihi:</td><td>${admin.birthDate || '-'}</td></tr>
+                <tr><td class="label">E-Posta:</td><td>${admin.email || '-'}</td></tr>
+            </table>
+
+            <div class="section-title">2. İlgili Öğrenci / Kişi Bilgileri</div>
+            <table>
+                <tr><td class="label">Ad Soyad:</td><td>${student.fullName || 'Genel / Sahipsiz Eşya'}</td></tr>
+                <tr><td class="label">Kayıt Numarası:</td><td>${student.registerNumber || '-'}</td></tr>
+                <tr><td class="label">Koltuk Numarası:</td><td>${student.seatNumber || '-'}</td></tr>
+                <tr><td class="label">İletişim Telefonu:</td><td>${student.phone || '-'}</td></tr>
+            </table>
+
+            <div class="section-title">3. Kayıp Eşya Detayları</div>
+            <table>
+                <tr><td class="label">Eşya Adı:</td><td><strong>${item.itemName || '-'}</strong></td></tr>
+                <tr><td class="label">Kategori:</td><td>${item.category || '-'}</td></tr>
+                <tr><td class="label">Konum / Yer:</td><td>${item.location || '-'}</td></tr>
+                <tr><td class="label">Durum:</td><td>${item.status === 'bulundu' ? 'Bulundu / Teslim Bekliyor' : 'Aranıyor'}</td></tr>
+                <tr><td class="label">Açıklama:</td><td>${item.description || '-'}</td></tr>
+                <tr><td class="label">Kayıt Tarihi:</td><td>${dateStr}</td></tr>
+            </table>
+
+            <div class="footer">
+                <div>Tarih: ${new Date().toLocaleDateString('tr-TR')}</div>
+                <div class="signature-box">
+                    <p>Yönetici İmza</p>
+                    <br><br>
+                    <p><strong>${admin.name || ''} ${admin.surname || ''}</strong></p>
+                </div>
+            </div>
+
+            <script>
+                window.onload = function() {
+                    window.print();
+                }
+            </script>
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
 }
 
 async function confirmDeleteLostItem(itemId) {
@@ -774,28 +922,6 @@ function setupScannerEvents() {
         if (html5QrcodeScanner) {
             html5QrcodeScanner.clear().catch(e => console.error(e));
             html5QrcodeScanner = null;
-        }
-    });
-}
-
-function confirmDeleteStudent(studentId, fullName) {
-    Swal.fire({
-        title: 'Silmek İstiyor musunuz?',
-        text: `"${fullName}" öğrencisinin kaydı kalıcı olarak silinecektir!`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Evet, Sil!',
-        cancelButtonText: 'Vazgeç'
-    }).then(async (result) => {
-        if (result.isConfirmed) {
-            try {
-                await deleteDoc(doc(REGISTRATIONS_COL, studentId));
-                Swal.fire('Silindi!', 'Kayıt silindi.', 'success');
-            } catch (err) {
-                Swal.fire('Hata!', 'Silme işlemi başarısız oldu.', 'error');
-            }
         }
     });
 }
