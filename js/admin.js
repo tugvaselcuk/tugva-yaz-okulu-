@@ -1,3 +1,4 @@
+```javascript
 import { auth, db, REGISTRATIONS_COL } from "./firebase.js";
 import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { onSnapshot, doc, getDoc, updateDoc, deleteDoc, collection, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -860,3 +861,4 @@ function setupExcelExportEvent() {
     });
 }
 
+```
